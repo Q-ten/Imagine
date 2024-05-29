@@ -1,0 +1,733 @@
+function varargout = MonthlyRainfallDialogue(varargin)
+% MONTHLYRAINFALLDIALOGUE M-file for MonthlyRainfallDialogue.fig
+%      MONTHLYRAINFALLDIALOGUE, by itself, creates a new MONTHLYRAINFALLDIALOGUE or raises the existing
+%      singleton*.
+%
+%      H = MONTHLYRAINFALLDIALOGUE returns the handle to a new MONTHLYRAINFALLDIALOGUE or the handle to
+%      the existing singleton*.
+%
+%      MONTHLYRAINFALLDIALOGUE('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in MONTHLYRAINFALLDIALOGUE.M with the given input arguments.
+%
+%      MONTHLYRAINFALLDIALOGUE('Property','Value',...) creates a new MONTHLYRAINFALLDIALOGUE or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before MonthlyRainfallDialogue_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to MonthlyRainfallDialogue_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+
+% Edit the above text to modify the response to help MonthlyRainfallDialogue
+
+% Last Modified by GUIDE v2.5 08-May-2012 12:24:41
+
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @MonthlyRainfallDialogue_OpeningFcn, ...
+                   'gui_OutputFcn',  @MonthlyRainfallDialogue_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+% End initialization code - DO NOT EDIT
+
+
+% --- Executes just before MonthlyRainfallDialogue is made visible.
+function MonthlyRainfallDialogue_OpeningFcn(hObject, eventdata, handles, varargin)
+% This function has no output args, see OutputFcn.
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% varargin   command line arguments to MonthlyRainfallDialogue (see VARARGIN)
+
+% Choose default command line output for MonthlyRainfallDialogue
+handles.output = hObject;
+
+
+handles.meanEdits = [handles.janMeanEdit, handles.febMeanEdit, handles.marMeanEdit, ...
+            handles.aprMeanEdit, handles.mayMeanEdit, handles.junMeanEdit, ...
+            handles.julMeanEdit, handles.augMeanEdit, handles.sepMeanEdit, ...
+            handles.octMeanEdit, handles.novMeanEdit, handles.decMeanEdit];
+
+handles.sdEdits =   [handles.janSDEdit, handles.febSDEdit, handles.marSDEdit, ...
+            handles.aprSDEdit, handles.maySDEdit, handles.junSDEdit, ...
+            handles.julSDEdit, handles.augSDEdit, handles.sepSDEdit, ...
+            handles.octSDEdit, handles.novSDEdit, handles.decSDEdit];
+
+handles.meanPatches = zeros(12, 1);
+handles.upperSDLines = zeros(12, 1);
+handles.lowerSDLines = zeros(12, 1);
+
+
+% Either initialise a new rainfall model, or load the given one.
+if(nargin > 3)
+    if isempty(varargin{1})
+        nomodel = true;
+    else
+        nomodel = false;
+    end
+end
+    
+if nomodel
+    % Then its a new model
+    handles.rainMeans = [20 25 28 43 70 80 83 74 50 40 27 18];
+    handles.rainSDs = [5 5 5 5 5 5 5 5 5 5 5 5];
+    imobj = ImagineObject.getInstance();
+    simLength = imobj.simulationLength;
+    handles.yearlyRainMeans = repmat(handles.rainMeans, simLength, 1);
+    handles.yearlyRainSDs = repmat(handles.rainSDs, simLength, 1);
+    handles.useYearlyData = false;
+    handles.useZeroVariance = false;
+else
+    % Load the given model
+    rainModel = varargin{1};
+    handles.rainMeans = rainModel.rainMeans;
+    handles.rainSDs = rainModel.rainSDs;        
+    if isfield(rainModel, 'yearlyRainMeans')
+        handles.yearlyRainMeans = rainModel.yearlyRainMeans;
+    else
+        imobj = ImagineObject.getInstance();
+        simLength = imobj.simulationLength;
+        handles.yearlyRainMeans = repmat(rainModel.rainMeans, simLength, 1);
+    end
+    if isfield(rainModel, 'yearlyRainSDs')
+        handles.yearlyRainSDs = rainModel.yearlyRainSDs;
+    else
+        imobj = ImagineObject.getInstance();
+        simLength = imobj.simulationLength;
+        handles.yearlyRainSDs = repmat(rainModel.rainSDs, simLength, 1);
+    end
+    if isfield(rainModel, 'useYearlyData')
+        handles.useYearlyData = rainModel.useYearlyData;
+    else
+       handles.useYearlyData = false; 
+    end
+    if isfield(rainModel, 'useZeroVariance')
+        handles.useZeroVariance = rainModel.useZeroVariance;
+    else
+       handles.useZeroVariance = false; 
+    end    
+end
+
+% Update handles structure
+guidata(hObject, handles);
+
+setupControls(handles);
+
+% UIWAIT makes MonthlyRainfallDialogue wait for user response (see UIRESUME)
+uiwait(handles.figure1);
+
+
+% --- Outputs from this function are returned to the command line.
+function varargout = MonthlyRainfallDialogue_OutputFcn(hObject, eventdata, handles) 
+% varargout  cell array for returning output args (see VARARGOUT);
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Get default command line output from handles structure
+
+varargout{1} = handles.output;
+assignin('base', 'rainModel', handles.output);
+% The figure can be deleted now.
+delete(handles.figure1);
+
+
+function janSDEdit_Callback(hObject, eventdata, handles)
+% hObject    handle to janSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of janSDEdit as text
+%        str2double(get(hObject,'String')) returns contents of janSDEdit as a double
+
+month = 1;
+handles.rainSDs(month) = str2double(get(hObject, 'String'));
+redrawMonthlyRainData(handles.meanPatches(month), handles.upperSDLines(month), handles.lowerSDLines(month), handles.rainMeans(month), handles.rainSDs(month));
+
+
+% --- Executes during object creation, after setting all properties.
+function janSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to janSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function febSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to febSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function marSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to marSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function aprSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to aprSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function junSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to junSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function julSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to julSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function augSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to augSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function sepSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to sepSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function octSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to octSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function novSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to novSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes during object creation, after setting all properties.
+function decSDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to decSDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function maySDEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to maySDEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in cancelButton.
+function cancelButton_Callback(hObject, eventdata, handles)
+% hObject    handle to cancelButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+handles.output = {};
+guidata(hObject, handles);
+uiresume(handles.figure1);
+
+% --- Executes on button press in acceptButton.
+function acceptButton_Callback(hObject, eventdata, handles)
+% hObject    handle to acceptButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+output.rainMeans = handles.rainMeans;
+output.rainSDs = handles.rainSDs;
+output.drawFunction = @drawMonthlyRainfallModel;
+output.yearlyRainMeans = handles.yearlyRainMeans;
+output.yearlyRainSDs = handles.yearlyRainSDs;
+output.useYearlyData = handles.useYearlyData;
+output.useZeroVariance = handles.useZeroVariance;
+
+handles.output = output;
+guidata(hObject, handles);
+
+uiresume(handles.figure1);
+
+% --- Executes during object creation, after setting all properties.
+function janMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to janMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function febMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to febMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function marMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to marMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function aprMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to aprMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function mayMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to mayMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function junMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to junMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function julMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to julMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function augMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to augMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function sepMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to sepMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function octMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to octMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function novMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to novMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function decMeanEdit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to decMeanEdit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+
+
+
+function updateMonthlyMean(hObject, month, handles)
+
+handles.rainMeans(month) = str2double(get(hObject, 'String'));
+set(handles.totalRainMeanLabel, 'String', num2str(sum(handles.rainMeans), '%.1f'));
+redrawMonthlyRainData(handles.meanPatches(month), handles.upperSDLines(month), handles.lowerSDLines(month), handles.rainMeans(month), handles.rainSDs(month));
+guidata(hObject, handles);
+
+% Make the axes resize when the user clicks near the top, or if they've
+% reduced the height.
+lim = axis;
+axisHeight = lim(4);
+maxData = max(handles.rainMeans + handles.rainSDs);
+if(maxData < axisHeight / 3 || maxData > axisHeight * .9)
+    lim(4) = maxData * 1.2;
+end
+axis(lim);
+
+function updateMonthlySD(hObject, month, handles)
+
+handles.rainSDs(month) = str2double(get(hObject, 'String'));
+%set(handles.totalRainMeanLabel, 'String', num2str(sum(handles.rainMeans), '%.1f'));
+if(handles.useZeroMeans)
+    redrawMonthlyRainData(handles.meanPatches(month), handles.upperSDLines(month), handles.lowerSDLines(month), handles.rainMeans(month), 0);
+else
+    redrawMonthlyRainData(handles.meanPatches(month), handles.upperSDLines(month), handles.lowerSDLines(month), handles.rainMeans(month), handles.rainSDs(month));
+end
+guidata(hObject, handles);
+
+% Make the axes resize when the user clicks near the top, or if they've
+% reduced the height.
+lim = axis;
+axisHeight = lim(4);
+maxData = max(handles.rainMeans + handles.rainSDs);
+if(maxData < axisHeight / 3 || maxData > axisHeight * .9)
+    lim(4) = maxData * 1.2;
+end
+axis(lim);
+
+% redrawMonthlyRainData
+%
+% redraws an existing plot given new data.
+function redrawMonthlyRainData(meanPatch, upperSDLine, lowerSDLine, meanValue, sdValue)
+
+% We'll set patches clockwise from lower left corner.
+set(meanPatch, 'YData', [0 meanValue meanValue, 0]);
+set(upperSDLine, 'YData', [meanValue+sdValue, meanValue+sdValue]);
+set(lowerSDLine, 'YData', [meanValue-sdValue, meanValue-sdValue]);
+    
+
+
+
+% --- Executes on button press in startRainfallMouseInputButton.
+function startRainfallMouseInputButton_Callback(hObject, eventdata, handles)
+% hObject    handle to startRainfallMouseInputButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+lim = axis;
+while 1
+    
+    [x,y,button] = ginput(1);
+    if(button <= 0 || x <= lim(1) || x >= lim(2) || y <= lim(3) || y >= lim(4))
+        break;
+    end
+
+    month = floor(x / 50) + 1;
+    
+    if(button == 1)
+        % Set mean
+        handles.rainMeans(month) = y;    
+    end
+    if(button > 1)
+        % Set SD
+        handles.rainSDs(month) = abs(y - handles.rainMeans(month));
+    end
+    
+    set(handles.meanEdits(month), 'String', num2str(handles.rainMeans(month), '%4.1f'));
+    set(handles.sdEdits(month), 'String', num2str(handles.rainSDs(month), '%4.1f'));
+    guidata(hObject, handles);
+    
+    % Make the axes resize when the user clicks near the top, or if they've
+    % reduced the height.
+    lim = axis;
+    axisHeight = lim(4);
+    maxData = max(handles.rainMeans + handles.rainSDs);
+    if(maxData < axisHeight / 3 || maxData > axisHeight * .9)
+        lim(4) = maxData * 1.2;
+    end
+    axis(lim);
+    
+    updateMonthlyMean(handles.meanEdits(month), month, handles);
+%    updateMonthlySD(handles.meanEdits(month), month, handles);
+end
+
+
+
+% --- Executes during object creation, after setting all properties.
+function startRainfallMouseInputButton_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to startRainfallMouseInputButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% Sets up the controls based on the data in handles.
+%
+function setupControls(handles)
+
+if handles.useYearlyData
+    localRainMeans = mean(handles.yearlyRainMeans);
+    localRainSDs = mean(handles.yearlyRainSDs);
+    localHandles.rainMeans = localRainMeans;
+    localHandles.rainSDs = localRainSDs;
+    for i = 1:12   
+        set(handles.meanEdits(i), 'String', num2str(localRainMeans(i)));
+        set(handles.sdEdits(i), 'String', num2str(localRainSDs(i)));
+    end
+    updateYearlyGraph(handles);
+else
+
+    for i = 1:12   
+        set(handles.meanEdits(i), 'String', num2str(handles.rainMeans(i)));
+        set(handles.sdEdits(i), 'String', num2str(handles.rainSDs(i)));
+    end
+
+    [handles.meanPatches, handles.upperSDLines, handles.lowerSDLines] = drawMonthlyRainfallModel(handles, handles.axes1);
+    set(handles.totalRainMeanLabel, 'String', num2str(sum(handles.rainMeans), '%.1f'));
+    
+end
+set(handles.checkboxUseZeroVariance, 'Value', handles.useZeroVariance);
+refreshEnables(handles);
+guidata(handles.axes1, handles);
+
+function refreshEnables(handles)
+
+set(handles.checkboxUseYearlyData, 'Value', handles.useYearlyData);
+if handles.useYearlyData
+    set(handles.pushbuttonLoadYearlyMeanData, 'Enable', 'on');
+    set(handles.pushbuttonLoadYearlySDData, 'Enable', 'on');
+    set(handles.startRainfallMouseInputButton, 'Enable', 'off');
+    localRainMeans = mean(handles.yearlyRainMeans);
+    localRainSDs = mean(handles.yearlyRainSDs);
+    for i = 1:12   
+        set(handles.meanEdits(i), 'Enable', 'off');
+        set(handles.sdEdits(i), 'Enable', 'off');
+        set(handles.meanEdits(i), 'String', num2str(localRainMeans(i)));
+        if (handles.useZeroVariance)
+            set(handles.sdEdits(i), 'String', '0');        
+        else            
+            set(handles.sdEdits(i), 'String', num2str(localRainSDs(i)));
+        end
+    end
+else
+    set(handles.pushbuttonLoadYearlyMeanData, 'Enable', 'off');
+    set(handles.pushbuttonLoadYearlySDData, 'Enable', 'off');
+    set(handles.startRainfallMouseInputButton, 'Enable', 'on');
+    for i = 1:12   
+        set(handles.meanEdits(i), 'Enable', 'on');
+        set(handles.sdEdits(i), 'Enable', 'on');
+        set(handles.meanEdits(i), 'String', num2str(handles.rainMeans(i)));
+        if (handles.useZeroVariance)
+            set(handles.sdEdits(i), 'String', '0');        
+        else            
+            set(handles.sdEdits(i), 'String', num2str(handles.rainSDs(i)));
+        end
+    end        
+end
+
+% --- Executes on button press in pushbuttonLoadYearlySDData.
+function pushbuttonLoadYearlySDData_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbuttonLoadYearlySDData (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+data = SeriesImportTool(handles.yearlyRainSDs, 'Yearly Rain SDs');
+if ~isempty(data)
+    handles.yearlyRainSDs = data;
+    guidata(hObject, handles);
+    updateYearlyGraph(handles);
+end
+
+
+% --- Executes on button press in checkboxUseYearlyData.
+function checkboxUseYearlyData_Callback(hObject, eventdata, handles)
+% hObject    handle to checkboxUseYearlyData (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkboxUseYearlyData
+handles.useYearlyData = get(hObject,'Value');
+guidata(hObject, handles);
+refreshEnables(handles);
+updateGraph(handles)
+
+% --- Executes on button press in pushbuttonLoadYearlyMeanData.
+function pushbuttonLoadYearlyMeanData_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbuttonLoadYearlyMeanData (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+data = SeriesImportTool(handles.yearlyRainMeans, 'Yearly Rain Means');
+if ~isempty(data)
+    handles.yearlyRainMeans = data;
+    guidata(hObject, handles);
+    updateYearlyGraph(handles);
+end
+
+function updateGraph(handles)
+
+if(handles.useYearlyData)
+    updateYearlyGraph(handles);
+else
+    updateMonthlyGraph(handles);
+end
+
+function updateMonthlyGraph(handles)
+[handles.meanPatches, handles.upperSDLines, handles.lowerSDLines] = drawMonthlyRainfallModel(handles, handles.axes1);
+set(handles.totalRainMeanLabel, 'String', num2str(sum(handles.rainMeans), '%.1f'));
+guidata(handles.figure1, handles);
+
+function updateYearlyGraph(handles)
+
+localRainMeans = mean(handles.yearlyRainMeans);
+localRainSDs = mean(handles.yearlyRainSDs);
+localHandles.rainMeans = localRainMeans;
+localHandles.rainSDs = localRainSDs;
+localHandles.useZeroVariance = handles.useZeroVariance;
+[handles.meanPatches, handles.upperSDLines, handles.lowerSDLines] = drawMonthlyRainfallModel(localHandles, handles.axes1);
+set(handles.totalRainMeanLabel, 'String', num2str(sum(localRainMeans), '%.1f'));
+guidata(handles.figure1, handles);
+
+
+% --- Executes on button press in checkboxUseZeroVariance.
+function checkboxUseZeroVariance_Callback(hObject, eventdata, handles)
+% hObject    handle to checkboxUseZeroVariance (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkboxUseZeroVariance
+handles.useZeroVariance = get(hObject, 'Value');
+guidata(hObject, handles);
+refreshEnables(handles);
+updateGraph(handles);

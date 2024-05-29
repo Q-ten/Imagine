@@ -1,0 +1,29 @@
+function [ classCols ] = SearchHeadersForSold( headers )
+
+    % classCols is a list of indices that match 
+    % Ewes, Ewe hoggets, Ewe weaners, Wethers, Wether Hoggers, Wether
+    % Weaners.
+    
+    classCols = zeros(6, 1);
+    classPatterns = {'Mature Females', 'Ewes', 'Ewe Lambs', 'Mature Males', 'Wethers', 'Wether Lambs'};
+    for i = 1:length(headers)
+       
+        h = headers{i};
+        k1 = strfind(h, 'Stock traded');
+        k2 = strfind(h, 'Sold');
+        if ~isempty(k1) && ~isempty(k2)            
+            for j = 1:length(classPatterns)            
+                k = strfind(h, classPatterns{j});                
+                if ~isempty(k)
+                   if (classCols(j) == 0)
+                       classCols(j) = i; 
+                   else
+                       disp('Already for column that matches pattern.'); 
+                   end
+                end
+            end            
+        end        
+    end
+
+end
+

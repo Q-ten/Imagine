@@ -1,0 +1,166 @@
+function [crop, cropSettings] = createCrop(cropName, cropHeaders, cropPath, cropDefinitions, cropSettings)
+% CREATECROP - uses the cropName and headers and cropSettings to create a
+% crop file at the path specified.
+
+% crop is the created crop if successful or empty if not.
+
+% 1. Open the default crop file
+% 2. Get the temporal interactions and put them in the .
+% 2. Get the APSIM data.
+% 4. Make the changes to the crop file.
+% 5. Save the crop file to the cropPath.
+    pivotTableFieldForYield = 'yield';
+    ea = ExcelApp.getInstance;
+    crop = [];
+    
+    try
+        defaultCrop = load(cropSettings.DefaultCropPath);
+        crop = defaultCrop.crop;
+        
+        % Get APSIM Data:        
+        APSIMFile = [];
+        if isfield(cropSettings, 'APSIMFile')
+            if(isinterface(cropSettings.APSIMFile))
+                APSIMFile = cropSettings.APSIMFile;
+            end
+        end
+
+        if isempty(APSIMFile)
+            APSIMFile = ea.getExcelFile(cropSettings.APSIMFilePath);
+            cropSettings.APSIMFile = APSIMFile;
+        end
+
+        % Get the Pivot Table, pt.
+        pause(.1)   % seems to be needed in order for the next line to work consistently.
+        ws = get(APSIMFile, 'Worksheets', 'Pivot Table');        
+        pt = get(ws, 'PivotTables', 'APSIM Data');
+        
+        % Get a reference to the pivot field with the yield data.
+        pfYield = get(pt, 'PivotFields', ['Max of ', pivotTableFieldForYield]);
+
+        if strcmpi(cropName, 'Fallow')
+           yield = zeros(1, 40);
+        else            
+            % Get references to the pivot fields that are filters.
+            % Set the filters.
+            cropHeaders.Crop = cropName;
+            headers = fieldnames(cropHeaders);        
+
+            for i = 1:length(headers)
+                pf = get(pt, 'PivotFields', headers{i});
+                set(pf, 'CurrentPage', cropHeaders.(headers{i}))            
+            end
+
+            % Get the data
+            yield = get(get(pfYield, 'DataRange'), 'Value');
+
+            if (iscell(yield))
+               z = zeros(1, 40);           
+               yield = cell2mat(yield);
+               z(1:length(yield)) = yield;
+               yield = z / 1000;    % APSIM files use kg/Ha - we need tonnes/Ha
+            else
+                error('No data for the headers selected');            
+            end
+
+            % Set the yield data in the crop.
+            % Assumes it's an AnnualGrowthModel.        
+            % using ManualAnnualGM
+            % with YearlyData set for both trendType and varType.
+        end
+        
+        crop.growthModel.delegate.propagationParameters.manualAnnualGM.trend.trendData = yield;
+        crop.growthModel.delegate.propagationParameters.manualAnnualGM.trend.varData = zeros(1, 40);
+                
+        % Get Temporal Interactions Data:
+        
+        temporalInteractionsFile = [];
+        if isfield(cropSettings, 'TemporalInteractionsFile')
+            if(isinterface(cropSettings.TemporalInteractionsFile))
+                % Check that the open file is the one we want.
+                filePath1 = cropSettings.TemporalInteractionsFilePath;
+                filePath2 = [cropSettings.TemporalInteractionsFile.Path, '/', cropSettings.TemporalInteractionsFile.Name];
+                filePath1 = regexprep(filePath1, '\\', '/');
+                filePath2 = regexprep(filePath2, '\\', '/');
+                if strcmp(filePath1, filePath2)
+                    temporalInteractionsFile = cropSettings.TemporalInteractionsFile;
+                else
+                    cropSettings.TemporalInteractionsFilePath.Close;
+                    release(cropSettings.TemporalInteractionsFilePath);
+                end                
+            end
+        end
+
+        if isempty(temporalInteractionsFile)
+            temporalInteractionsFile = ea.getExcelFile(cropSettings.TemporalInteractionsFilePath);
+            cropSettings.TemporalInteractionsFile = temporalInteractionsFile;    
+        end
+
+        % Get the Named Range, "TemporalInteractions".
+        pause(.1)   % seems to be needed in order for the next line to work consistently.
+        ws = get(temporalInteractionsFile, 'Worksheets', 'Temporal Interactions');
+        TIRange = ws.Range('TemporalInteractions');
+        tis = TIRange.Value;
+                       
+        % Find the column for our crop.
+        % Find all the non empty cells and add the temporal interactions to
+        % the growth model.
+        % The temporal interactions are defined as a nx2 cell array with
+        % the first column being the crop name and the second being the
+        % percentage (out of 100) to use as the temporal modifier.
+        ix = find(ismember(tis(1, 2:end), cropName), 1, 'first');
+        tiCrops = tis(2:end, 1);
+        tiModifiers = tis(2:end, 1 + ix);
+        nonEmptyIxs = find(cellfun(@(x)(~isempty(x) && ~isnan(x)), tiModifiers));
+        cropTemporalModifiers = [tiCrops(nonEmptyIxs), tiModifiers(nonEmptyIxs)];
+                
+        % We need to convert the crop names to crop codes so that we can
+        % include alternatives of the same crop with unique names.
+        cropTemporalModifiers = mapCropsToCodes(cropTemporalModifiers, cropDefinitions);
+        
+        crop.growthModel.delegate.propagationParameters.temporalModifiers = cropTemporalModifiers;
+        
+        % We need to name it according to the code actually. Find the
+        % matching code in cropDefinitions.        
+        cropDef = cropDefinitions(ismember({cropDefinitions.Crop}, cropName));
+   %     crop.name = cropName;
+        crop.name = cropDef.Code;
+        crop.colour = getColourForCrop(cropName);
+        
+        % Set the prices and costs...
+        priceToUse = getPriceData(cropSettings.priceData, cropHeaders);
+        costsToUse = getCostData(cropSettings.costData, cropHeaders);
+        
+        % Hard code the income
+        crop.growthModel.productPriceModels.trend.trendData = priceToUse.mean;
+        crop.growthModel.productPriceModels.trend.varData = priceToUse.sd;
+        
+        % Hard code the Planting and Harvesting
+        crop.growthModel.growthModelEvents(1).costPriceModel.trend.trendData = costsToUse.Planting.mean;
+        crop.growthModel.growthModelEvents(1).costPriceModel.trend.varData = costsToUse.Planting.sd;
+        
+        crop.growthModel.growthModelEvents(2).costPriceModel.trend.trendData = costsToUse.Harvesting.mean;
+        crop.growthModel.growthModelEvents(2).costPriceModel.trend.varData = costsToUse.Harvesting.sd;
+        
+        % Now do the financial events.
+        % The test crop is there to be copied.
+        setEvents(crop, costsToUse);
+        
+        % Save the crop.
+        pathReg = '([/\\][^/\\]+$)';
+        folder = regexprep(cropPath, pathReg, '');
+        folderInfo = dir(folder);
+        if ~isempty(folderInfo) && strcmp(folderInfo(1).name, '.')  % Then it's a folder.
+            save(cropPath, 'crop');
+        else
+            mkdir(folder);
+            save(cropPath, 'crop');
+        end
+        
+        
+    catch e
+        disp(e.message)    
+        crop = Crop.empty(1, 0);
+    end
+
+end

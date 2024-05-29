@@ -1,0 +1,120 @@
+% A Layout contains the handles for the graphics objects related to a 
+% single year in Imagine's main window. 
+%
+%   NOTE - This class should not be confused with a PaddockLayout. A Layout
+%   represents a graphic that is drawn in the Imagine window. A
+%   PaddockLayout contains the information required to draw the Layout.
+%   Perhaps the naming could have been better, but that's how it is.
+
+classdef Layout < handle
+
+    properties
+        % patchHandle is the main patch.
+        patchHandle = 0;
+        
+        % textHandle displays the year number
+        textHandle = 0;
+        
+        % beltLines is a list of Lines used to represent the belts on the
+        % patch
+        beltLines = zeros(1, 10);
+        
+        % borderLines is a list of Lines used to represent the borders on
+        % the patch.
+        borderLines = zeros(1,4); 
+                
+    end
+
+    
+    methods
+        
+        function obj = Layout()
+        
+        end
+        
+        function setBackgroundColour(obj, colourTriple)
+            
+           % If the background colour is set, then we should update the patch. 
+           if obj.patchHandle ~= 0 && isValidColourTriple(colourTriple)
+              try
+                  set(obj.patchHandle, 'Color', colourTriple);
+              catch exception
+                  disp(exception.message);
+              end            
+           end
+           
+        end
+        
+        function setForegroundColour(obj, colourTriple)
+            % If the belt colour is set then we should update the belts and
+            % the borders.
+            if isValidColourTriple(colourTriple)
+                    borderLinesToSet =  obj.borderLines(obj.borderLines ~=0);
+                    beltLinesToSet =  obj.beltLines(obj.beltLines ~=0);
+                   
+                    set([borderLinesToSet, beltLinesToSet], 'Colour', colourTriple);
+                    %for i = 1:length(obj.borderLines)
+
+%                     if(obj.borderLines(i) ~= 0)
+%                       try
+%                           set(obj.borderLines(i), 'Colour', colourTriple);
+%                       catch exception
+%                           print(exception.message);
+%                       end
+%                    end
+%                end
+%                 for i = 1:length(obj.beltLines)
+%                     if(obj.beltLines(i) ~= 0)
+%                       try
+%                           set(obj.beltLines(i), 'Colour', colourTriple);
+%                       catch exception
+%                           print(exception.message);
+%                       end
+%                    end
+%                 end
+            end
+        end
+        
+
+        % This function takes a string - 'on' or 'offd' and
+        % sets the visibility of all the Border lines in the layout accordingly.
+        function setBorderVisibility(obj, visString)
+            if strcmp(visString, 'on') == 0 || strcmp(visString, 'off') == 0
+                borderLinesToSet =  obj.borderLines(obj.borderLines ~=0);
+                set(borderLinesToSet, 'Visible', visString);
+%                 for i = 1:length(obj.borderLines)
+%                     if(obj.borderLines(i) ~= 0)
+%                       try
+%                           set(obj.borderLines(i), 'Visible', visString);
+%                       catch exception
+%                           print(exception.message);
+%                       end
+%                    end
+%                 end
+            else
+                print('must pass ''on'' or ''off'' to setBordersVisibility');
+            end
+        end
+        
+        % This function takes a string - 'Enabled' or 'Disabled' and
+        % sets the visibility of all the Belt lines in the layout accordingly.
+        function setBeltVisibility(obj, visString)
+            if strcmp(visString, 'on') == 0 || strcmp(visString, 'off') == 0
+                beltLinesToSet =  obj.beltLines(obj.beltLines ~=0);
+                set(beltLinesToSet, 'Visible', visString);
+%                 for i = 1:length(obj.beltLines)
+%                     if(obj.beltLines(i) ~= 0)
+%                       try
+%                           set(obj.beltLines(i), 'Visible', visString);
+%                       catch exception
+%                           print(exception.message);
+%                       end
+%                    end
+%                 end
+            else
+                print('must pass ''on'' or ''off'' to setBeltVisibility');
+            end
+        end
+        
+    end
+end

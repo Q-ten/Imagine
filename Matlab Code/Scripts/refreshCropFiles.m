@@ -1,0 +1,150 @@
+function [success, crops, cropFileInfos, cropSettings] = refreshCropFiles(headers, pathPatterns, cropDefinitions, cropSettings)
+% REFRESHCROPFILES - Uses the headers and the pathPatterns to locate saved
+% crop files. If they don't exist, or they are older than the files
+% specified in cropSettings (the files used to define the details in the
+% crops) then (re)create the crop files and save them to the specified
+% location.
+
+% Return true or false to indicate whether the refresh completed and the
+% files all exist and are up to date.
+
+% 0. Get the timestamps for the APSIM files and the temporal interactions
+% file. If they don't both exist, fail.
+% 1. Figure out if each crop exists.
+% 2. For each crop, if it doesn't exist, or if it's out of date based on
+% the timestamps, then recreate it.
+% 3. To recreate it, we can probably call yet another function.
+% createCrop(cropName, defaultCropPath, cropPath, settings) - or similar.
+
+    crops = Crop.empty(1, 0);
+
+    % Check we have all the required inputs.
+    requiredHeaders =  {'Location', ...
+...%                        'Climate', ...
+                        'Soil', ...
+                        'Rotation'};
+    if ~all(ismember(requiredHeaders, fieldnames(headers)))
+        success = false;
+        warning(joinStrings(requiredHeaders, ', ', ', and ', 'are all required fields in argument ''headers''.'));
+        return
+    end
+
+%     requiredPathPatterns = {'APSIMPath', ...
+%                             'TemporalInteractionsPath', ...
+%                             'DefaultCropPath', ...
+%                             };
+%     if ~all(ismember(requiredCropSettings, fieldnames(cropSettings)))
+%         success = false;
+%         warning('APSIMPAth, TemporalInteractionsPath and DefaultCropPath are all required fields in argument ''cropSettings''.');
+%         return
+%     end
+
+    requiredPathPatterns = {'Root', ...
+                            'CropPathPattern', ...
+                            'APSIMPathPattern', ...
+                            'TemporalInteractionsPathPattern',...
+                            'DefaultCropPathPattern',...
+...%                            'ImagineRunPathPattern', ...
+                           };
+    if ~all(ismember(requiredPathPatterns, fieldnames(pathPatterns)))
+        success = false;
+        warning(joinStrings(requiredPathPatterns, ', ', ', and ', 'are all required fields in argument ''pathPatterns''.'));
+        return
+    end
+
+    % Get timestamps for the crop settings files.
+    APSIMPath = generatePath(pathPatterns.Root, headers, pathPatterns.APSIMPathPattern);
+    temporalInteractionsPath = generatePath(pathPatterns.Root, headers, pathPatterns.TemporalInteractionsPathPattern);
+    apsimFileInfo = dir(APSIMPath);    
+    temporalInteractionsFileInfo = dir(temporalInteractionsPath);
+%    defaultCropFileInfo = dir(cropSettings.DefaultCropPath);
+    
+    requiredCropSettingsFileInfos = [apsimFileInfo, temporalInteractionsFileInfo];%, defaultCropFileInfo];
+
+    if isempty(apsimFileInfo.datenum) || isempty(temporalInteractionsFileInfo.datenum)% || isempty(defaultCropFileInfo)
+        success = false;    
+        warning('APSIM file or TemporalInteractions file don''t exist.');
+        return
+    end
+    
+    cropSettings.APSIMFilePath = APSIMPath;
+    cropSettings.TemporalInteractionsFilePath = temporalInteractionsPath;
+    
+    % Make sure each crop file exists and is up to date.
+    success = true;
+    crops = Crop.empty(1, 0);
+    cropFileInfos = [];
+    for i = 1:length(cropDefinitions)
+        cropDef = cropDefinitions(i);
+        
+        % Use the code in the header for the generating the path as it's
+        % unique.
+        headers.Crop = cropDef.Code;       
+        
+        cropPath = generatePath(pathPatterns.Root, headers, pathPatterns.CropPathPattern);    
+        defaultCropPath = generatePath(pathPatterns.Root, headers, pathPatterns.DefaultCropPathPattern);
+        
+        upToDate = true;
+        cropFileInfo = dir(cropPath);
+
+        if isempty(cropFileInfo) || isempty(cropFileInfo.datenum)
+            upToDate = false;
+        else
+            if any( cropFileInfo.datenum < [requiredCropSettingsFileInfos.datenum])
+                upToDate = false;
+            end
+        end
+
+        if ~upToDate
+            % Remove the rotation header.
+            cropHeaders = rmfield(headers, 'Rotation');
+            % Replace the Code in the header with the crop name.
+            cropHeaders.Crop = cropDef.Crop;
+            
+            % Go through and replace in cropHeaders any field that appears
+            % in both cropHeaders and cropDefinition.
+            cropDefFields = fieldnames(cropDef);
+            headerFields = fieldnames(cropHeaders);
+            for j = 1:length(cropDefFields)
+               cropDefField = cropDefFields{i};
+               if ismember(cropDefField, headerFields)
+                  if ~isempty(cropDef.(cropDefField)) && ~strcmp(cropDef.(cropDefField), '*')
+                     % If the cropDef is not empty or an astersik, replace
+                     % the field.
+                     cropHeaders.(cropDefField) = cropDef.(cropDefField); 
+                  end
+               end
+            end
+            
+            % Create the crop with the modified cropHeaders.
+            cropSettings.DefaultCropPath = defaultCropPath;
+            [crop, cropSettings] = createCrop(cropDef.Crop, cropHeaders, cropPath, cropDefinitions, cropSettings);
+        else
+            loadStruct = load (cropPath);
+            if isfield(loadStruct, 'crop')
+                crop = loadStruct.crop;
+            else
+                crop = Crop.empty(1, 0);
+            end
+        end
+                
+        if isempty(crop)
+            success = false;
+            crops = Crop.empty(1, 0);
+            error(['Could not create crop ', cropDef.Crop]);
+        else
+            crops(i) = crop;    
+        end        
+        
+        if (i == 1)
+            cropFileInfos = dir(cropPath);
+        else
+            cropFileInfos(i) = dir(cropPath);
+        end
+    end
+    
+end
+
+
+
+

@@ -1,0 +1,93 @@
+% draws a representation of a paddock including belts on the axes provided.
+function drawPaddockSummaryOnAxes(ax, primaryColour, imagineParameters, beltS)
+
+
+% Set size and limits of axes.
+paddockLength = imagineParameters.paddockLength;
+paddockWidth =  imagineParameters.paddockWidth;
+
+axes(ax);
+axis([0 paddockLength 0 paddockWidth]);
+
+% Use position information in handles to resize the axes itself.
+pos = get(ax, 'Position');
+XMid = pos(1) + pos(3) / 2;
+YMid = pos(2) + pos(4) / 2;
+
+maxSide = max(pos(3:4));
+
+if(paddockLength > paddockWidth)
+   x = XMid + 0.5 * maxSide * [-1 1];
+   y = YMid + 0.5 * maxSide * paddockWidth / paddockLength * [-1 1];
+else
+   x = XMid + 0.5 * maxSide * paddockLength / paddockWidth * [-1 1];
+   y = YMid + 0.5 * maxSide * [-1 1];    
+end
+
+set(ax, 'Position', [x(1), y(1), x(2) - x(1), y(2) - y(1)]);
+
+useBelts = beltS.useBelts;
+useBorders = beltS.useBorders;
+
+if(useBorders || useBelts)
+    exclusionZone = beltS.exclusionZone;
+    rowsPerBelt = beltS.rowsPerBelt;
+    rowSpacing = beltS.rowSpacing;
+    beltColour = beltS.beltColour;
+end
+
+if(useBelts)
+    headland = beltS.headland;
+    beltNum = beltS.beltNum;
+end
+
+if(useBorders)
+    gapLengthAtCorners = beltS.gapLengthAtCorners;
+end
+
+axes(ax);
+lim = axis;
+cla
+axis off 
+hold on
+% patch([1 1000 1000 1], [1 1 1000 1000], primaryColour, 'EdgeColor', 0.8*[1 1 1]);
+patch([lim(1)+1 lim(2) lim(2) lim(1)+1], [lim(3)+1 lim(3)+1 lim(4) lim(4)], ones(1, 4), primaryColour, 'EdgeColor', 0.8*[1 1 1]);
+
+if(useBelts)
+   beltLength = paddockLength-2*headland;
+   beltWidth = 2*exclusionZone + (rowsPerBelt - 1) * rowSpacing;
+   beltX = [0 beltLength beltLength 0]; 
+   beltY = beltWidth * [-1 -1 1 1] / 2; %[0 0 beltWidth beltWidth];
+
+   beltSpacing = paddockWidth / (beltNum+1);
+
+   for i = 1:beltNum
+        patch(headland + beltX, beltY+(i)*beltSpacing, ones(1, 4), beltColour, 'EdgeColor', beltColour);
+   end
+end
+
+if(useBorders)
+   borderLength1 = paddockLength-2*gapLengthAtCorners;
+   borderLength2 = paddockWidth-2*gapLengthAtCorners;
+   beltWidth = 2*exclusionZone + (rowsPerBelt - 1) * rowSpacing;
+   beltX = [0 borderLength1 borderLength1 0]; 
+   beltY = [0 0 beltWidth beltWidth];   
+
+   %beltSpacing = paddockWidth / beltNum - beltWidth;
+
+   % An offset on the border patches so that they can be seen
+   edge = 3;
+
+   % BOTTOM
+   patch(beltX + gapLengthAtCorners, beltY + edge, ones(1, 4), beltColour, 'EdgeColor', beltColour);
+   % TOP
+   patch(beltX + gapLengthAtCorners, paddockWidth-beltY - edge, ones(1, 4), beltColour, 'EdgeColor', beltColour);
+
+   beltX = [0 borderLength2 borderLength2 0]; 
+
+   % LEFT
+   patch(beltY + edge, beltX + gapLengthAtCorners, ones(1, 4), beltColour, 'EdgeColor', beltColour);
+   % RIGHT
+   patch(paddockLength-beltY-edge, beltX + gapLengthAtCorners, ones(1, 4), beltColour, 'EdgeColor', beltColour);
+
+end    

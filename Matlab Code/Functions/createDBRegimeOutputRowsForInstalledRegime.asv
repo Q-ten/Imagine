@@ -1,0 +1,64 @@
+% The plantedCrop should be able to get back to it's installedRegime, it's
+% sim, etc. That way it should be able to get to everything it needs.
+% Once the plantedCrop's outputs are retrieved, we can extract the
+% multipliers for the output rates. (They're saved as rates not direct
+% amounts).
+function rows = createDBRegimeOutputRowsForInstalledRegime(installedRegime, installedRegimeID, units, unitIDs)
+
+startOutputs = plantedCrop.getOutputsMonthStart;
+endOutputs = plantedCrop.getOutputsMonthEnd;
+
+if isempty(startOutputs) || isempty(endOutputs)
+    rows = [];
+    return
+end
+
+startMonth = plantedCrop.plantedMonth;
+
+% rows give different outputs, cols give months.
+outputCount = size(startOutputs, 1);
+rowCount = (size(startOutputs, 2) + size(endOutputs, 2)) * outputCount;
+
+% Columns to go into the DB.
+% cropID, monthIndex, monthDay, indexInOutputs, amountUnitID, amountNumber
+DBColCount = 6;
+monthDayStart = 1;
+monthDayEnd = 30; % Doesn't matter much, just needs to not be 1.
+
+rows = zeros(rowCount, DBColCount);
+rowIndex = 0;
+
+for x = 1:2
+    
+    if x == 1
+       day = monthDayStart; 
+       outputs = startOutputs;
+    else
+       day = monthDayEnd;
+       outputs = endOutputs;
+    end
+
+    for i = 1:size(outputs, 1)
+        % Get the ID for this output.
+        
+        unit = outputs(i, 1).unit;
+        denUnit = outputs(i, 1).denominatorUnit;
+
+        amountUnitID = unitIDs(unit == units);
+        if isempty(amountUnitID) || length(amountUnitID) ~= 1
+           error('Could not find unitID or found too many.'); 
+        end
+
+        for j = 1:size(outputs, 2)
+
+           monthIndex = startMonth + j - 1;
+           denAmount = plantedCrop.getAmount(denUnit, monthIndex, day);
+           amountNumber = outputs(i, j).number * denAmount.number;
+
+           rowIndex = rowIndex + 1;
+           rows(rowIndex, :) = [plantedCropID, monthIndex, day, i, amountUnitID, amountNumber];        
+
+        end   
+    end    
+end
+

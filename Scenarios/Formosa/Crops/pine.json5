@@ -1,0 +1,201 @@
+{
+  // Basic Crop parameters
+  "name": "Pine",
+  "colour": [
+    0.1,
+    .6,
+    0.1
+  ],
+  "category_name": "Coppice Tree Crop",
+  "growth_model_name": "FixedYieldGrowthModel",
+  // Growth model parameters
+  "growth_model_parameters": {
+    products: {
+      "thinnings": {
+        unit: "stumpage_thinning",
+        denominator_unit: "ha",
+        // series is the series data. Series data will loop from the start if the sim reaches the end of the data.
+        // A series can be a list of values, or it can be an external reference via an object (i.e. key/value pairs
+        // between curly braces { ... }.
+        // Here, an Excel reference is provided via a named range.
+        // An Excel reference requires the excel_workbook provided as a string, and the range.
+        // Optionally, the excel_sheet can be provided.
+        series: {
+          excel_workbook: "$Scenario/Resources/Formosa.xlsx",
+          // Optional sheet name. If provided will make the sheet active before the range is obtained.
+          // That way A1:A600 style ranges will work as well as both local and global named ranges.
+          // If not provided, the first sheet will be activated before the range is obtained.
+          excel_sheet: "Pine Products",
+          // Range may be A1 style or a named range, either local to a sheet or global.
+          // The range should be a 1D range and will be converted to a list of values that will be the series data.
+          range: "Thinnings",
+        },
+        // "absolute" or "relative". If not "absolute", or if index_type is not provided, then it will be relative.
+        // An "absolute" index means that the series data will be indexed to the sim start.
+        // A "relative" index means that the series will be indexed to the planting of the crop.
+        index_type: "absolute"
+      },
+      "timber": {
+        unit: "stumpage",
+        denominator_unit: "ha",
+        series: {
+          excel_workbook: "$Scenario/Resources/Formosa.xlsx",
+          excel_sheet: "Pine Products",
+          range: "Timber",
+        },
+        index_type: "absolute"
+      },
+      "carbon_credits": {
+        unit: "co2e",
+        denominator_unit: "ha",
+        series: {
+          excel_workbook: "$Scenario/Resources/Formosa.xlsx",
+          excel_sheet: "Pine Products",
+          range: "CarbonCredits",
+        },
+        index_type: "absolute"
+      },
+      "amenity": {
+        unit: "amenity_increase",
+        denominator_unit: "paddock",
+        series: {
+          excel_workbook: "$Scenario/Resources/Formosa.xlsx",
+          excel_sheet: "Pine Products",
+          range: "Amenity",
+        },
+        index_type: "absolute"
+      },
+      "biodiversity": {
+        unit: "biodiversity",
+        denominator_unit: "ha",
+        series: {
+          excel_workbook: "$Scenario/Resources/Formosa.xlsx",
+          excel_sheet: "Pine Products",
+          range: "Biodiversity",
+        },
+        index_type: "absolute"
+      }
+
+    },
+    outputs: {
+      "tree_height": {
+        unit: "tree_height",
+        denominator_unit: "unity",
+        series: {
+          excel_workbook: "$Scenario/Resources/Formosa.xlsx",
+          excel_sheet: "Pine Products",
+          range: "TreeHeight",
+        },
+        index_type: "absolute"
+      },
+      "biodiversity": {
+        unit: "biodiversity_index",
+        denominator_unit: "unity",
+        series: {
+          excel_workbook: "$Scenario/Resources/Formosa.xlsx",
+          excel_sheet: "Pine Products",
+          range: "Biodiversity",
+        },
+        index_type: "absolute"
+      }
+    },
+  },
+  product_price_models: [
+    {
+      name: "Harvest Stumpage Income",
+      units: "dollars_per_m3_of_stumpage",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [25],
+        var_data: [0]
+      },
+    },
+    {
+      name: "Thinning Stumpage Income",
+      units: "dollars_per_m3_of_stumpage_thinning",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [25],
+        var_data: [0]
+      },
+    },
+    {
+      name: "Carbon Credit Income",
+      units: "dollars_per_tonne_of_co2e",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [220],
+        var_data: [0]
+      },
+    },
+    {
+      name: "Amenity Income",
+      units: "dollars_per_dollar_of_amenity_increase",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [5000],
+        var_data: [0]
+      },
+    },
+    {
+      name: "Biodiversity Income",
+      units: "dollars_per_habitat_ha",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [0],
+        var_data: [0]
+      },
+    }
+  ],
+
+  // Cost price models.
+  // In this example, I allow for more than one definition for an event.
+  cost_price_models: [
+    {
+      name: "Seedling Costs",
+      event_name: "Planting",
+      units: "dollars_per_tree",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [1.8],
+        var_data: [0]
+      },
+    },
+    {
+      name: "Fencing Costs",
+      event_name: "Planting",
+      units: "dollars_per_m_of_crop_interface_length",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [7],
+        var_data: [0]
+      },
+    },
+    {
+      name: "Site Preparation Costs",
+      event_name: "Planting",
+      units: "dollars_per_ha",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [275],
+        var_data: [0]
+      },
+    }
+  ],
+  // Financial events:
+  financial_events: [
+    {
+      // 6 months after planting, undertake weed control.
+      name: "Post Plant Weed Control",
+      units: "dollars_per_ha",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [100],
+        var_data: [0]
+      },
+      trigger: {
+        c1: "event_happened_x_months_ago('Planting', 8)"
+      },
+    }
+  ]
+}

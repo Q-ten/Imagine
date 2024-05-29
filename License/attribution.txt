@@ -1,0 +1,25 @@
+The following individuals and organisations have contributed to the development of Imagine.
+Their contributions are greatly appreciated.
+
+
+Individuals:
+
+Amir Abadi
+John Bartle
+Don Cooper
+Daniel Mendham
+Quenten Thomas
+
+
+Organisations:
+
+WA Department of Primary Industries and Regional Development (DPIRD)
+WA Department of Environment and Conservation (DEC)
+Future Farm Industries CRC
+CSIRO
+Quisitive Pty Ltd
+
+
+This file (or an appropriate replacement) should be included in future releases of Imagine, in accordance with its CC-BY-NC-SA(4.0) license.
+This list should be extended to attribute new contributors as appropriate.
+

@@ -1,0 +1,27 @@
+{
+  // General regime parameters
+  regime_class_name: 'AnnualRegime',
+  type: 'primary',
+  regime_label: 'Pasture',
+  start_year: 1,
+  final_year: 25,
+  timeline_colour: [0, 0, 1],
+
+  // Annual regime parameters
+  // Rotation list is a list of dictionaries with crop defined.
+  // Depending on the crop category, we'll require different parameters:
+  // For annual category: plant_month and harvest_month (and optionally companion crop)
+  // For pasture: DSE  (assumes the pasture is installed whenever the crop is so configured)
+  rotation_list: [
+    {
+      crop: "Pasture",
+      // companion_crop: None,
+//      plant_month: 4, // Or 'Mar' or 'March'
+//      harvest_month: 12,
+      // DSE per ha.
+      DSE: 18
+    },
+  ]
+
+
+}

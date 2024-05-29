@@ -1,0 +1,146 @@
+function [farmProfits, farmData] = runFarmScenario(imo, iteration, paddocks, rotationDefinitions, cropDefinitions, pathPatterns, overheads, costData, priceData)
+
+% For each paddock item, get imagine run for the given iteration.
+% The results from the paddocks are put into farmData.
+% Paddock i is at farmData(i)
+farmData = [];
+settings = [];
+settings.costData = costData;
+settings.priceData = priceData;
+
+% farmProfits holds the summed profit data from the paddocks.
+
+for i = 1:length(paddocks)
+
+    % Get the paddock's name, soil and area.
+    paddockName = paddocks(i).name;
+    soil = paddocks(i).soil;
+    area = paddocks(i).area;
+    
+    phaseProfits = [];
+    
+    % Get the rotation on that paddock
+    rotationDef = rotationDefinitions(ismember({rotationDefinitions.paddock}, paddockName));
+    rotationCodes = rotationDef.rotation;
+    
+    % Get the relevant cropDefinitions
+    relevantCropDefs = cropDefinitions(ismember({cropDefinitions.Code}, rotationCodes));
+    
+    % Create headers. It's just the iteration with the Soil and Rotation.
+    headers = iteration;
+    headers.Soil = soil;
+    headers.Rotation = joinStrings(rotationCodes, '.');
+    
+    % Refresh the imagine setup.
+    [success, isLoaded, settings] = refreshImagineSetup(headers, pathPatterns, relevantCropDefs, settings);
+    
+    if ~success
+       itStrings = fieldnames(iteration);
+       itmsg = 'Could not load Imagine setup for iteration: \n';
+       for j = 1:length(itStrings)
+           itmsg = [itmsg, '\n', itString{j}, ' - ',  iteration.(itString{j})];
+       end
+       error(itmsg); 
+    end
+    
+    phases = Simulation.empty(1, 0);
+    simsNeedRefresh = false;
+    setupPath = generatePath(pathPatterns.Root, headers, pathPatterns.ImagineSetupPathPattern);
+    setupFileInfo = dir(setupPath);
+    for j = 1:length(rotationCodes)
+    
+        % Get the sim path.
+        simPathHeaders = headers;
+        simPathHeaders.Phase = num2str(j);
+        simPaths{j} = generatePath(pathPatterns.Root, simPathHeaders, pathPatterns.SimPathPattern);
+        
+        simFileInfo = dir(simPaths{j});
+        if ~isempty(simFileInfo) && ~isempty(simFileInfo.datenum) 
+           if simFileInfo.datenum > setupFileInfo.datenum
+               continue
+           end
+        end
+       
+        % If we reach here, then we failed a test and need to refresh all
+        % sims.
+        simsNeedRefresh = true || simsNeedRefresh;
+    end
+    
+    if (simsNeedRefresh)
+        % If we need to redo the sims, load the setup before we start going
+        % through the rotations.
+        if (~isLoaded)            
+            % Load the setup into Imagine.
+            imo.load(setupPath ,'');
+            isLoaded = true;
+        end
+    end
+        
+    for j = 1:length(rotationCodes)
+        if simsNeedRefresh
+            % For each phase of the rotation:
+            % Run the simulation if we need to. Otherwise, load the sim data.                     
+            imo.simulationManager.launchSimulationDialogue;
+            imo.simulationManager.simulateInMonths(1);
+
+            % sim exists in the root workspace as a result of simulateInMonths.
+            % We should probably return it too.
+            sim = imo.simulationManager.simulations(end);
+            imo.simulationManager.simulations = sim;
+            
+            % Also need to save the sim.
+            save(simPaths{j}, 'sim');
+            
+            % Call rotate on the regime to cycle the crops.
+            imo.regimeManager.regimes(1).delegate.rotate;
+            
+            % Call replaceRegime on the regimeManager to alert it that it's
+            % changed.
+            imo.regimeManager.replaceRegime(imo.regimeManager.regimes(1).regimeLabel, imo.regimeManager.regimes(1));       
+
+        else
+           % load sim
+           sim = load(simPaths{j});
+           sim = sim.sim;
+        end
+
+        if j == 1
+            phases = sim;
+        else
+           phases(j) = sim; 
+        end
+        
+        % Get paddock profit array from sim and scale paddock size.
+        % Important - paddock must have area of 100 Ha.
+        % At some point, this should be made soft.
+        pa = simToProfitArray(sim) * (area / 100);
+                
+        if isempty(phaseProfits)
+            phaseProfits = {pa};
+        else
+            phaseProfits{j} = pa;        
+        end
+        
+    end    
+    
+    % Average the phases into a single set of profit numbers (must be
+    % mean/s.d. array (NormDist array).
+    
+    s.phaseData = phaseProfits;
+    s.paddockData = NormDist.averageCells(phaseProfits);    
+    
+    % Put the results in 
+    % farmData(i).phaseData = array of phase profits (array of NormDist
+    % arrays)
+    % farmData(i).paddockData = averaged phases (NormDist array)
+    if (i == 1)
+        farmData = (s);
+    else
+        farmData(i) = s;
+    end
+end
+
+farmProfits = NormDist.sumCells({farmData.paddockData});
+farmProfits = NormDist.sumCells({farmProfits, -1 * overheads});
+
+end

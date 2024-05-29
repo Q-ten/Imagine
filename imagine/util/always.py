@@ -1,0 +1,4 @@
+
+def always():
+    return True
+

@@ -1,0 +1,94 @@
+% The plantedCrop should be able to get back to it's installedRegime, it's
+% sim, etc. That way it should be able to get to everything it needs.
+% Once the plantedCrop's outputs are retrieved, we can extract the
+% multipliers for the output rates. (They're saved as rates not direct
+% amounts).
+function rows = createDBOutputRowsForPlantedCrop(plantedCrop, plantedCropID, units, unitIDs, wb, wbxStart, wbxFinish)
+
+if nargin < 7
+    wb = [];
+end
+
+startOutputs = plantedCrop.getOutputsMonthStart;
+endOutputs = plantedCrop.getOutputsMonthEnd;
+
+if isempty(startOutputs) || isempty(endOutputs)
+    rows = [];
+    return
+end
+
+startMonth = plantedCrop.plantedMonth;
+
+regimeEndMonth = plantedCrop.installedRegime
+
+% rows give different outputs, cols give months.
+outputCount = size(startOutputs, 1);
+rowCount = (size(startOutputs, 2) + size(endOutputs, 2)) * outputCount;
+
+% Columns to go into the DB.
+% cropID, monthIndex, monthDay, indexInOutputs, amountUnitID, amountNumber
+DBColCount = 6;
+monthDayStart = 1;
+monthDayEnd = 30; % Doesn't matter much, just needs to not be 1.
+
+rows = zeros(rowCount, DBColCount);
+rowIndex = 0;
+
+for x = 1:2
+    
+    if x == 1
+       day = monthDayStart; 
+       outputs = startOutputs;
+    else
+       day = monthDayEnd;
+       outputs = endOutputs;
+    end
+
+    if ~isempty(wb)
+        wbxxStart = (wbxFinish - wbxStart) * (x - 1) / 2 + wbxStart;
+        wbxxFinish = (wbxFinish - wbxStart) * x / 2 + wbxStart;
+        waitbar(wbxxStart, wb);
+    end
+    
+    irange = size(outputs, 1);
+    for i = 1:irange
+        % Get the ID for this output.
+        if ~isempty(wb)
+            wbxxiStart = (wbxxFinish - wbxxStart) * (i - 1) / irange + wbxxStart;
+            wbxxiFinish = (wbxxFinish - wbxxStart) * i / irange + wbxxStart;
+            waitbar(wbxxiStart, wb);
+        end
+        
+        unit = outputs(i, 1).unit;
+        denUnit = outputs(i, 1).denominatorUnit;
+
+        amountUnitID = unitIDs(unit == units);
+        if isempty(amountUnitID) || length(amountUnitID) ~= 1
+           error('Could not find unitID or found too many.'); 
+        end
+
+        jrange = size(outputs, 2);
+        for j = 1:jrange
+            if ~isempty(wb)
+                wbxxijStart = (wbxxiFinish - wbxxiStart) * (j - 1) / jrange + wbxxiStart;
+                waitbar(wbxxijStart, wb);
+            end
+           monthIndex = startMonth + j - 1;
+           denAmount = plantedCrop.getAmount(denUnit, monthIndex, day);
+           amountNumber = outputs(i, j).number * denAmount.number;
+
+           rowIndex = rowIndex + 1;
+           rows(rowIndex, :) = [plantedCropID, monthIndex, day, i, amountUnitID, amountNumber];        
+
+        end
+        if ~isempty(wb)
+            waitbar(wbxxiFinish, wb);        
+        end
+    end
+    if ~isempty(wb)
+        waitbar(wbxxFinish, wb);
+    end        
+end
+if ~isempty(wb)
+    waitbar(wbxFinish, wb);
+end

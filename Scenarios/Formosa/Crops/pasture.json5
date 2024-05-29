@@ -1,0 +1,138 @@
+{
+  // Basic Crop parameters
+  "name": "Pasture",
+  "colour": [
+    0.1,
+    .9,
+    0.1
+  ],
+  "category_name": "Pasture",
+  "growth_model_name": "ShelteredPastureGrowthModel",
+  // Growth model parameters
+  "growth_model_parameters": {
+    // The self replacing flock is modelled around 1000 ewes.
+    // DSE per 1000 is how many DSE for the 1000 ewe flock.
+    "dse_per_1000_ewes": 2500,
+    // Define the python file and function that returns the shelter settings.
+    // This allows for tweaking of settings in the same file by setting a different function name.
+    "shelter_settings_file": "$Scenario/Resources/get_formosa_settings.py",
+    "shelter_settings_function": 'get_formosa_settings',
+    "foo": {
+      "start_month": "Jan",
+      // FOO settings given in terms of kg of FOO / ha.
+      "available_at_start": 1500,
+      "required_before_grazing": 1100,
+      "for_100_percent_cs2": 1500,          // Below this level, all sheep are CS2.
+      "for_100_percent_cs3": 12000,         // At this level, all sheep are CS3.
+    },
+    "fodder_requirements": {
+      // Defined per category in terms of kg/hd/week
+      "ewes":           6,
+      "ewe_hoggets":    6,
+      "ewe_lambs":      3.5,
+      "rams":           3,
+      "wethers":        5,
+      "wether_hoggets": 5,
+      "wether_lambs":   3.5
+    },
+    "wool_sales": {
+      "month": "Mar",
+      // Wool sales define 3 numbers per category in the flock.
+      // number per 1000 ewes, kg wool per head, and $ / kg of wool in that category.
+      "matrix": [
+      // Category       # per 1000 ewes      kg/hd         $/kg
+        ["ewes",           960,                 5.4,          16],
+        ["ewe_hoggets",    208,                 5.4,          18],
+        ["ewe_lambs",      425,                 1.1,          16],
+        ["rams",            20,                 8.0,          16],
+        ["wethers",          0,                 5.4,          16],
+        ["wether_hoggets",   0,                 5.4,          18],
+        ["wether_lambs",   425,                 1.1,          16]
+      ]
+    },
+    "sheep_sales": {
+      "month": "Sep",
+      // Sheep sales define 3 numbers per category in the flock.
+      // number sold per 1000 ewes, $/head for CS2, $/head for CS3.
+      "matrix": [
+      // Category       # per 1000 ewes    $/hd (CS2)    $/hd (CS3)
+        ["ewes",           177,                 91,          91],
+        ["ewe_hoggets",    196,                119,         119],
+        ["ewe_lambs",        0,                119,         119],
+        ["rams",             4,                 85,          85],
+        ["wethers",          0,                 85,          85],
+        ["wether_hoggets",   0,                119,         119],
+        ["wether_lambs",   421,                 85,          85]
+      ]
+    }
+  },
+  product_price_models: [
+    // Because the income is calculated in the model, this is more of a scale factor.
+    // Set the trend to 1.
+    {
+      name: "Wool Income",
+      units: "dollars_per_dollar_of_wool_income",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [1],
+        var_data: [0]
+      },
+    },
+    {
+      name: "Sales Income",
+      units: "dollars_per_dollar_of_meat_income",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [1],
+        var_data: [0]
+      },
+    }
+  ],
+
+  // Cost price models.
+  // In this example, I allow for more than one definition for an event.
+  cost_price_models: [
+    {
+      name: "Fodder Costs",
+      event_name: "Feeding",
+      units: "dollars_per_tonne_of_fodder",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [300],
+        var_data: [0]
+      },
+    }
+  ],
+
+  // Financial events:
+  financial_events: [
+    {
+      // Incur a cost per DSE each year at some point to cover shearing,
+      // crutching, and animal health, but exclusive of interest on stock.
+      name: "Rearing",
+      units: "dollars_per_dse",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [13.50],
+        var_data: [0]
+      },
+      trigger: {
+        c1: "month_is('Jun')"
+      },
+    },
+    {
+      // Pasture maintenance incurred once per year.
+      // Covers fertilizer, spraying, renovation etc.
+      name: "Pasture Maintenance",
+      units: "dollars_per_ha",
+      trend: {
+        trend_type: "Polynomial", var_type: "Polynomial",
+        trend_data: [86],
+        var_data: [0]
+      },
+      trigger: {
+        c1: "month_is('Apr')"
+      },
+    }
+  ]
+}

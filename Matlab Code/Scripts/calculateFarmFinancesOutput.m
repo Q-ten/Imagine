@@ -1,0 +1,79 @@
+function out = calculateFarmFinancesOutput(calculation, farmProfits, settings)
+
+    yearsToConsider = 12;
+    if ~isempty(farmProfits)
+        farmProfits = farmProfits(1:yearsToConsider);
+    end
+    
+    switch calculation
+        
+        case 'Average Yearly Profit'
+            if isempty(farmProfits)
+               out = {'Average Yearly Profit (mean)', 'Average Yearly Profit (s.d.)'};
+               return;
+            end
+            % Get the average mean and 
+            av = average(farmProfits);
+            out = av.mean;
+            out(2) = av.sd;        
+        case 'Total Profit'
+            if isempty(farmProfits)
+               out = {'Total Profit (mean)', 'Total Profit (s.d.)'};
+               return;
+            end
+            
+            % Sum everything up and give the mean and sd.
+            total = sum(farmProfits);
+            out = total.mean;
+            out(2) = total.sd;
+        case 'NPV'
+            if isempty(farmProfits)
+               out = {'NPV (mean)', 'NPV (s.d.)'};
+               return;
+            end
+            
+            discounts = (1 + settings('Discount Rate')) .^ -(1:yearsToConsider);
+            npv = sum(farmProfits.*discounts);
+            out = npv.mean;
+            out(2) = npv.sd;
+        case 'Finance Limited'
+
+            if isempty(farmProfits)
+               out = {'Finance Limited'};
+               return;
+            end
+
+            % In each year, what is the probability that we will go
+            % bankrupt? In the next year, what is the probability we'll go
+            % bankrupt, given that we didn't in the previous years?
+
+            % we need to work out the independent chance that we go
+            % bankrupt in each year, then add that up with the
+            % cumulativeProb function to get the full result.
+            
+%             independentProbs = zeros(1, yearsToConsider);
+%             for i = 1:length(farmProfits)
+%                 runningTotal = sum(farmProfits(1:i));
+%                 runningTotal.mean = runningTotal.mean + settings('Starting balance');
+%                 independentProbs(i) = normcdf(-settings('Max overdraft'), runningTotal.mean, runningTotal.sd);
+%             end
+%             
+%             out = cumulativeProb(independentProbs);
+%             
+            
+            poolSize = 1000000;
+            pool = ones(poolSize, 1) * settings('Starting balance');
+            limit = -settings('Max overdraft');
+            
+            for i = 1:length(farmProfits)
+                yearlyPool = (randn(poolSize, 1) * farmProfits(i).sd + farmProfits(i).mean) .* (pool >= limit);   
+                sum(yearlyPool < limit)
+                pool = pool + yearlyPool;
+            end
+                              
+            out = sum(pool < limit) / poolSize;            
+            
+        otherwise
+            error('Calculation type not recognised.');            
+    end
+end

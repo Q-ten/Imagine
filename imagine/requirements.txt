@@ -1,0 +1,25 @@
+# Requirements for pimagine.
+
+numpy
+
+pydantic == 1.10.7
+
+
+# For fast json parsing.
+ujson 
+pyjson5
+
+
+# For dot access in all our classes saved to json.
+DotMap 
+dotwiz
+
+# For converting to snake case.  Could possibly use our own function called underscore that came from the matlab version.
+inflection
+
+# For writing out simulations to an Excel workbook.
+xlsxwriter
+
+# For reading in from Excel. Different tools.
+openpyxl
+

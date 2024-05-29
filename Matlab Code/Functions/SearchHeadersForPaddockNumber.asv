@@ -1,0 +1,28 @@
+function [ classCols ] = SearchHeadersForPaddockNumber( headers )
+
+    % classCols is a list of indices that match 
+    % Ewes, Ewe hoggets, Ewe weaners, Wethers, Wether Hoggers, Wether
+    % Weaners.
+    
+    classCols = zeros(6, 1);
+    classPatterns = {'', 'Ewe yearlings', 'Ewe weaners', '', 'Wether yearlings', 'Wether weaners',};
+    classAntiPatterns = {'', '', ', }
+    for i = 1:length(headers)
+       
+        h = headers{i};
+        k1 = strfind(h, 'Paddock no. occupied');
+        if ~isempty(k1)           
+            for j = 1:length(classPatterns)            
+                k = strfind(h, classPatterns{j});                
+                if ~isempty(k)
+                   if (classCols(j) == 0)
+                       classCols(j) = i; 
+                   else
+                       disp('Already for column that matches pattern.'); 
+                   end
+                end
+            end            
+        end        
+    end
+
+end

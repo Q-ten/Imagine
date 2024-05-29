@@ -1,0 +1,26 @@
+{
+climate_series_models: [
+  {
+    // alphas and betas for gamma.
+    series_name: 'monthly rainfall',
+    series: {
+          excel_workbook: "$Scenario/Resources/Formosa.xlsx",
+          excel_sheet: "Climate",
+          range: "MonthlyRainfall",
+    },
+    series_model: 'fixed'
+  },
+  {
+    /*
+    // means and sds for gaussian distributions. (Values generated less than 0 become 0.)
+    series_name: "monthly rainfall",
+    series_model: "gaussian",
+    means: [12.4,	15.9,	14.7,	36.2,	93.7,	141.9,	148.2,	107.1,	68.7,	40.0,	22.2,	6.7],
+    sds: [28.6,	31.9,	19.5,	27.5,	44.7,	62.6,	55.7,	37.6,	30.7,	25.5,	18.4,	9.3],
+    */
+  }
+
+
+  ]
+}
+

@@ -1,0 +1,348 @@
+% The BeltRegimeDelegate is the concrete subclass of RegimeDelegate that
+% provides the implementation of the 'Belt' regime category. It is a
+% 'secondary' regime - that is it covers part of the paddock and takes
+% space away from the primary regime.
+%
+% The Belt regime defines a layout for a woody crop plantation, where crops
+% are planted in rows and the rows appear in 'belts' spaced equally through
+% the paddock and also 'borders' which flank the four edges of the paddock.
+% The user can choose whether to include belts or borders, but the regime
+% must contains at least one type.
+%
+% Planting is a unique event, with the crop surviving thereafter. The
+% harvests are 'coppice' harvests where the Above ground biomass is
+% harvested and sold, but the crops grow back from the stump.
+%
+% The user has a choice as to how the harvest dates are specified. There
+% may be a fixed schedule defined by the user, or perhaps the crop is
+% harvested when it reaches a particualr level, or the user can define a
+% more complicated scheme.
+%
+classdef BeltRegimeDelegate < RegimeDelegate
+    
+    properties (SetAccess = protected)
+               
+        % Regime category. Something like 'Annual' or 'Belt'
+        % In this case it is 'Belt'
+        regimeCategory
+        
+        % Type of the regime. Should be 'primary', 'secondary', or
+        % 'exclusive'
+        % In this case it is 'secondary'
+        type
+    end
+    
+    properties
+                
+        % The name of the regime.
+        regimeLabel
+        
+        % Start and final year for the regime.
+        startYear
+        finalYear
+        
+        % Colour for the timeline in the ImagineWindow.
+        timelineColour
+        
+        % cropEventTriggers
+        % This will be a struct array with (cropName, eventTriggers) the fields.
+        % eventTriggers will be a struct array of RegimeEventTriggers,
+        % which is a neater way of dealing with the triggers defined in
+        % the regime.
+        % It's the responsibility of the Regime to provide triggers for
+        % certain events. This is where those are kept.
+        cropEventTriggers
+    end
+    
+    % This property bracket covers Belt regime specific data.
+    properties (Access = private)
+       
+        % regimeParameters provides a structure containing fields that
+        % specify the regime.
+        % Fields include:
+        %
+        % useBelts
+        % useBorders
+        % crop
+        % harvestYears
+        % plantingMonth
+        % harvestMonth
+        % rowsPerBelt
+        % rowSpacing
+        % exclusionZone
+        % plantSpacing
+        % headland
+        % beltNum
+        % biomassThreshold
+        % biomassThresholdUnit
+        beltRegimeParameters
+                
+    end
+    
+   % Constructor method
+   methods
+   
+       function reg = BeltRegimeDelegate()
+           reg.regimeCategory = 'Belt';
+           reg.type = 'secondary';
+           reg.beltRegimeParameters = struct( ...
+                                    'useBelts', {}, ...
+                                    'useBorders', {}, ...
+                                    'crop', {}, ...
+                                    'harvestYears', {}, ...
+                                    'plantingMonth', {}, ...
+                                    'harvestMonth', {}, ...
+                                    'rowsPerBelt', {}, ...
+                                    'rowSpacing', {}, ...
+                                    'exclusionZone', {}, ...
+                                    'plantSpacing', {}, ...
+                                    'headland', {}, ...
+                                    'beltNum', {}, ...
+                                    'biomassThreshold', {}, ...
+                                    'biomassThresholdUnit', {});
+                                   
+            reg.cropEventTriggers = RegimeEventTrigger.empty(1,0);
+       end
+       
+   end
+   
+   methods
+       
+       % Return the exclusion zone width from the belt regime parameters
+       function exclusionZoneWidth = getExclusionZoneWidth(regDel)
+           exclusionZoneWidth = regDel.beltRegimeParameters.exclusionZone;
+        end
+       
+       % The implementation of this method should bring up a GUI in which
+       % the user details all the relevant parameters for this regime. The
+       % GUI should return a valid regime or an empty
+       % array. It should take a valid regime parameters in the case
+       % where we are editting the regime. These will be used to populate
+       % the GUI.
+       % The validity of a regime requires the validity of its delegate
+       % object.
+       function regDel = setupRegime(regDel)
+       
+           regimeMgr = RegimeManager.getInstance;
+           cropMgr = CropManager.getInstance;
+           regimeArguments.regimeDefinitions = regimeMgr.regimeDefinitions;
+           regimeArguments.cropDefinitions = cropMgr.cropDefinitions;
+
+           % If this is a new regime, it will have no crops (and therefore
+           % cropEvents will be empty), so it won't need regimeParameters
+           % to be defined. However, if it's an existing regime, we need to
+           % pass the regimeParameters.
+           if ~isempty(regDel.cropEventTriggers)
+               
+               % Else set up regime parameters and add them to the
+               % arguments.
+               passedRegimeParameters.regimeLabel = regDel.regimeLabel;
+               passedRegimeParameters.startYear = regDel.startYear;
+               passedRegimeParameters.finalYear = regDel.finalYear;
+               passedRegimeParameters.timelineColour = regDel.timelineColour;
+               
+               passedRegimeParameters.cropEventTriggers = regDel.cropEventTriggers;
+               passedRegimeParameters.beltRegimeParameters = regDel.beltRegimeParameters;
+               
+               regimeArguments.regimeParameters = passedRegimeParameters;
+           end
+           
+           regOut = BeltRegimeDialog(regimeArguments);
+           
+           if ~isempty(regOut)
+               % Save each parameter that's particular to this regime.
+               regDel.regimeLabel = regOut.regimeLabel;
+               regDel.startYear = regOut.startYear;
+               regDel.finalYear = regOut.finalYear;
+               regDel.timelineColour = regOut.timelineColour;
+               regDel.beltRegimeParameters = regOut.parameters;
+               regDel.cropEventTriggers = regOut.cropEventTriggers;
+
+           end
+           
+       end
+       
+       % Returns a column of regime outputs based on the simulation.
+       function outputsColumn = calculateOutputs(regDel, sim)
+            % Outputs returned by this regime:
+            % Paddock
+            % Area 
+            % Tree
+            % Belt length
+            % Row length
+
+            imOb = ImagineObject.getInstance;
+            paddockLength = imOb.paddockLength;
+            paddockWidth = imOb.paddockWidth;
+            params = regDel.beltRegimeParameters;
+            
+            % Paddock
+            
+            unit    = Unit('', 'Paddock', 'Unit');                
+            outputsColumn = Amount(1, unit);
+
+            % Area
+            % To work out the area we have to get the area of the
+            % secondary regime, if one's installed. So we need to look
+            % up the sim.
+            unit = Unit('', 'Area', 'Hectare');
+                       
+            borderArea = 0;
+            beltArea = 0;
+            beltWidth = 0;
+            borderWidth = 0;
+            
+            if(params.useBelts)
+                beltWidth = (params.rowsPerBelt - 1) * params.rowSpacing + params.exclusionZone * 2;
+                beltLength = paddockLength - 2 * params.headland;
+                beltNum = params.beltNum;
+
+                beltArea = beltWidth * beltLength * beltNum;
+            end
+        
+            % We use only one side having the exclusion zone.
+            if(params.useBorders)
+                borderWidth = (params.rowsPerBelt - 1) * params.rowSpacing + params.exclusionZone *2;
+                borderLength = (paddockLength + paddockWidth) * 2 - 8 * params.gapLengthAtCorners;
+                borderArea = borderWidth * borderLength;
+            end
+       
+            outputsColumn(2) = Amount((beltArea + borderArea) / 10000, unit);
+            
+            % Trees
+            unit = Unit('', 'Tree', 'Unit');
+            
+            beltTrees = 0;
+            if(params.useBelts)
+                beltLength = (paddockLength - 2 * params.headland);
+                rowsPerBelt = params.rowsPerBelt;
+                plantSpacing = params.plantSpacing;
+
+                beltTrees = ( (floor(beltLength/plantSpacing)+1) * rowsPerBelt) * params.beltNum;
+            end
+
+            % We use only one side having the exclusion zone.
+            borderTrees = 0;
+            if(params.useBorders)
+
+                side1 = paddockLength - 2 * params.gapLengthAtCorners;
+                side2 = paddockWidth  - 2 * params.gapLengthAtCorners;
+                rowsPerBelt = params.rowsPerBelt;
+                plantSpacing = params.plantSpacing;
+
+                borderTrees = ( (floor(side1/plantSpacing)+1 + floor(side2/plantSpacing)+1 ) * rowsPerBelt * 2);
+            end
+            
+            outputsColumn(3) = Amount(borderTrees + beltTrees, unit);
+
+            % Km of Belts
+            unit = Unit('', 'Belts', 'Km');
+
+            beltLength = 0;
+            borderLength = 0;        
+            beltNum = params.beltNum;
+            if(params.useBelts)
+                beltLength = (paddockLength - 2 * params.headland) * beltNum;
+            end
+            if(params.useBorders)
+                borderLength = (paddockLength + paddockWidth) * 2 - 8 * params.gapLengthAtCorners;
+            end
+            rowsPerBelt = params.rowsPerBelt;
+
+            outputsColumn(4) = Amount((beltLength + borderLength )/1000, unit);
+            
+            % And Km of Rows
+            unit = Unit('', 'Rows', 'Km');
+            outputsColumn(5) = Amount(((beltLength + borderLength) * rowsPerBelt )/1000, unit);
+             
+            % Might need a cropInterface Amount too.
+            unit = Unit('', 'Crop Interface Length', 'm');
+            outputsColumn(6) = Amount(beltLength * 2 + beltWidth * beltNum * 2 + borderLength + 8 * borderWidth, unit);
+            
+       end
+       
+       % Provides read access from outside into the parameters of the
+       % regime.
+       function p = getRegimeParameter(obj, pname)
+           
+           p = [];
+           try
+               p = obj.beltRegimeParameters.(pname);
+           catch e
+               disp e
+           end  
+           
+       end
+       
+       % Returns a cell array of strings containing the names of the crops
+       % planted in the given year. It could be more than one crop in the
+       % case of a primary regime that has a companion crop, which is why
+       % a cell array of strings is required.
+       function cns = getCropsPlantedInYear(regDel, year)
+
+           cns = {regDel.beltRegimeParameters.crop};
+           
+       end
+       
+       % Returns a PaddockLayout object which contains information on how
+       % the regime causes the paddock to be drawn in the requested year.
+       % The PaddockLayout doens't have to specify how the entire paddock
+       % is laid out, as more than one regime may influence this.
+       % PaddockLayouts can be combined from more than one regime so that
+       % later when the layout is drawn in the main Imagine window all the
+       % data to draw the paddock in the requested year is available.
+       function pl = getPaddockLayoutInYear(regDel, year)
+
+           pl = PaddockLayout;
+           % Set the foreground colour to the crop's colour.
+           cropMgr = CropManager.getInstance;
+           cropDefs = cropMgr.cropDefinitions;
+           cropDef = cropDefs(strcmp({cropDefs.name}, regDel.beltRegimeParameters.crop));
+           pl.foregroundColour = cropDef.colour;
+           pl.shouldShowBelts = regDel.beltRegimeParameters.useBelts;
+           pl.shouldShowBorders = regDel.beltRegimeParameters.useBorders;
+           pl.shouldShowWoodlands = false;
+           pl.shouldShowContours = false;
+           
+           pl.data.Belts_and_Borders.exclusionZone = regDel.beltRegimeParameters.exclusionZone;
+           pl.data.Belts_and_Borders.rowsPerBelt = regDel.beltRegimeParameters.rowsPerBelt;
+           pl.data.Belts_and_Borders.rowSpacing = regDel.beltRegimeParameters.rowSpacing;
+           pl.data.Belts_and_Borders.headland = regDel.beltRegimeParameters.headland;
+           pl.data.Belts_and_Borders.beltNum = regDel.beltRegimeParameters.beltNum;
+           pl.data.Belts_and_Borders.gapLengthAtCorners = regDel.beltRegimeParameters.gapLengthAtCorners;
+
+       end
+       
+       % Checks that the parameters of the regime delegate are ok.
+       % Implementation is entirely up to the concrete regime delegate
+       % class.
+       % In this case the isValid method is not static, since we don't know
+       % beforehand what the names of the subclassed RegimeDelegates will
+       % be.
+       function valid = isValid(regDel)
+           valid = true;
+       end
+
+       % We need to find and check all references to cropNames in the
+       % delegtae.
+       % The only crop referred to is the belt crop.
+       % Also need to update cropEventTriggers.
+       function cropNameHasChanged(regDel, previousName, newName)
+            if strcmp(regDel.beltRegimeParameters.crop, previousName)
+                regDel.beltRegimeParameters.crop = newName;
+            end
+            
+            for i = 1:length(regDel.cropEventTriggers)
+                if strcmp(regDel.cropEventTriggers(i).cropName, previousName)
+                    regDel.cropEventTriggers(i).cropName = newName;
+                end
+                for j = 1:length(regDel.cropEventTriggers(i).eventTriggers)
+                    % regDel.cropEventTriggers(i).eventTriggers(j) is a RegimeEventTrigger.
+                    regDel.cropEventTriggers(i).eventTriggers(j).cropNameHasChanged(previousName, newName);                    
+                end
+            end
+       end
+       
+   end
+   
+end

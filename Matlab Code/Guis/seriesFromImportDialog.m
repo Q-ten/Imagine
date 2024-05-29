@@ -1,0 +1,279 @@
+function varargout = seriesFromImportDialog(varargin)
+% SERIESFROMIMPORTDIALOG M-file for seriesFromImportDialog.fig
+%      SERIESFROMIMPORTDIALOG, by itself, creates a new SERIESFROMIMPORTDIALOG or raises the existing
+%      singleton*.
+%
+%      H = SERIESFROMIMPORTDIALOG returns the handle to a new SERIESFROMIMPORTDIALOG or the handle to
+%      the existing singleton*.
+%
+%      SERIESFROMIMPORTDIALOG('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in SERIESFROMIMPORTDIALOG.M with the given input arguments.
+%
+%      SERIESFROMIMPORTDIALOG('Property','Value',...) creates a new SERIESFROMIMPORTDIALOG or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before seriesFromImportDialog_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to seriesFromImportDialog_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+
+% Edit the above text to modify the response to help seriesFromImportDialog
+
+% Last Modified by GUIDE v2.5 05-Jan-2012 09:05:44
+
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @seriesFromImportDialog_OpeningFcn, ...
+                   'gui_OutputFcn',  @seriesFromImportDialog_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+% End initialization code - DO NOT EDIT
+
+
+% --- Executes just before seriesFromImportDialog is made visible.
+function seriesFromImportDialog_OpeningFcn(hObject, eventdata, handles, varargin)
+% This function has no output args, see OutputFcn.
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% varargin   command line arguments to seriesFromImportDialog (see VARARGIN)
+
+% Choose default command line output for seriesFromImportDialog
+handles.output = hObject;
+
+
+if nargin < 4
+    error('Must provide a structure from which to extract the series.');
+    close(gcf);
+else
+    S = varargin{1};
+    handles.S = S;
+    if ~isstruct(S)
+        error('Must provide a structure from which to extract the series.');
+        close(gcf);
+    end
+end
+
+fns = fieldnames(S);
+handles.fns = fns;
+set(handles.listboxVariables, 'String', fns);
+set(handles.listboxVariables, 'Value', 1);
+
+handles.transposed = false(length(fns), 1);
+set(handles.checkboxTransposed, 'Value', 0);
+
+handles.columns = ones(length(fns), 1);
+handles.showAllColumns = false;
+
+set(handles.togglebuttonShowColumns, 'String', 'Show all columns');
+
+% Update handles structure
+guidata(hObject, handles);
+
+listboxVariables_Callback(handles.listboxVariables, [], handles);
+
+% UIWAIT makes seriesFromImportDialog wait for user response (see UIRESUME)
+uiwait(handles.figure1);
+
+
+% --- Outputs from this function are returned to the command line.
+function varargout = seriesFromImportDialog_OutputFcn(hObject, eventdata, handles) 
+% varargout  cell array for returning output args (see VARARGOUT);
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+varIndex = get(handles.listboxVariables, 'Value');
+varName = handles.fns{varIndex};
+varCol = handles.columns(varIndex);
+var = handles.S.(varName);
+if handles.transposed(varIndex)
+    var = var';
+end
+series = var(:, varCol);    
+varargout{1} = series;
+
+delete(handles.figure1);
+
+% --- Executes on selection change in listboxVariables.
+function listboxVariables_Callback(hObject, eventdata, handles)
+% hObject    handle to listboxVariables (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns listboxVariables contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from listboxVariables
+
+% load the column and transposed data into those controls.
+varIndex = get(handles.listboxVariables, 'Value');
+varName = handles.fns{varIndex};
+varCol = handles.columns(varIndex);
+var = handles.S.(varName);
+
+if handles.transposed(varIndex)
+    var = var';
+end
+
+colCount = size(var, 2);
+
+if colCount > 100
+   set(handles.popupmenuColumn, 'Style', 'edit');
+   set(handles.popupmenuColumn, 'String', num2str(varCol));
+else
+   numbers = cell(colCount, 1);
+   for i = 1:colCount
+       numbers{i} = num2str(i);
+   end
+   set(handles.popupmenuColumn, 'String', numbers);
+   set(handles.popupmenuColumn, 'Value', varCol);
+end
+
+set(handles.checkboxTransposed, 'Value', handles.transposed(varIndex));
+
+refreshTableData(handles);
+
+% --- Executes during object creation, after setting all properties.
+function listboxVariables_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to listboxVariables (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: listbox controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in checkboxTransposed.
+function checkboxTransposed_Callback(hObject, eventdata, handles)
+% hObject    handle to checkboxTransposed (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkboxTransposed
+varIndex = get(handles.listboxVariables, 'Value');
+varName = handles.fns{varIndex};
+handles.transposed(varIndex) = logical(get(hObject, 'Value'));
+var = handles.S.(varName);
+dim = 2;
+if handles.transposed(varIndex)
+    dim = 1;
+end
+if handles.columns(varIndex) > size(var, dim)
+    handles.columns(varIndex) = 1;
+end
+
+guidata(hObject, handles);
+
+% Call listbox callback instead to make sure that if the number of columns
+% has changed we get an edit instead of a DDL for the columns.
+listboxVariables_Callback(handles.listboxVariables, eventdata, handles)
+
+% --- Executes on selection change in popupmenuColumn.
+function popupmenuColumn_Callback(hObject, eventdata, handles)
+% hObject    handle to popupmenuColumn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns popupmenuColumn contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from popupmenuColumn
+
+% This control could be an edit. Need to check.
+varIndex = get(handles.listboxVariables, 'Value');
+if strcmp(get(hObject, 'Style'), 'edit')
+    number = str2num(get(hObject, 'String'));
+    if ~isnan(number)
+        if number >= 1
+            number = floor(number);
+            handles.columns(varIndex) = number;
+        end
+    end
+    set(hObject, 'String', num2str(handles.columns(varIndex)));
+else
+    handles.columns(varIndex) = get(hObject, 'Value');    
+end
+guidata(hObject, handles);
+refreshTableData(handles);
+
+% --- Executes during object creation, after setting all properties.
+function popupmenuColumn_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to popupmenuColumn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in pushbutton6.
+function pushbutton6_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+uiresume(handles.figure1);
+
+
+function refreshTableData(handles)
+
+% work out the data that should go in the table.
+varIndex = get(handles.listboxVariables, 'Value');
+varName = handles.fns{varIndex};
+var = handles.S.(varName);
+
+if handles.transposed(varIndex)
+    var = var';
+end
+
+if handles.showAllColumns
+   data = var; 
+else
+   varCol = handles.columns(varIndex);
+   data = var(:, varCol);
+end
+
+set(handles.uitable1, 'Data', data);
+
+
+% --- Executes on button press in togglebuttonShowColumns.
+function togglebuttonShowColumns_Callback(hObject, eventdata, handles)
+% hObject    handle to togglebuttonShowColumns (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of togglebuttonShowColumns
+
+showAllColumns = logical(get(hObject, 'Value'));
+handles.showAllColumns = showAllColumns;
+guidata(hObject, handles);
+
+if showAllColumns
+    enabledString = 'off';
+    buttonString = 'Show selected column';
+else
+    enabledString = 'on';
+    buttonString = 'Show all columns';
+end
+
+set(handles.popupmenuColumn, 'Enable', enabledString);
+set(handles.checkboxTransposed, 'Enable', enabledString);
+set(hObject, 'String', buttonString);
+
+refreshTableData(handles);

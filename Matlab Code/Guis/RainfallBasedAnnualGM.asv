@@ -1,0 +1,42 @@
+% RainfallBasedAnnualGM
+% 
+% Provides based yield for annual crops based on rainfall in relevant
+% months within a given year. Uses a quadratic function to map the total
+% rain in relevant months to a yield.
+
+classdef RainfallBasedAnnualGM < handle
+   
+    properties
+       
+        A
+        B
+        C
+        
+        firstRelevantMonth
+        lastRelevantMonth
+        
+    end
+    
+    methods
+       
+        function setupSummaryPanel(obj, HIData)
+            
+        end
+        
+        function calculateYearlyYield(obj, sim)
+            
+        end
+               
+        % Populates a gui axes to show the mapping between rainfall and 
+        function populateSummaryGraph(obj, ax, HIData)
+            
+        end
+        
+        % Launches its dialog and sets its data accordingly.
+        function setup(obj)
+            
+        end
+        
+    end
+    
+end

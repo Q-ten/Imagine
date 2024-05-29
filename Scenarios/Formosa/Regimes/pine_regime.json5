@@ -1,0 +1,39 @@
+{
+
+  // General regime parameters
+  regime_label: "Pine Regime",
+  type: 'secondary',
+  timeline_colour: [1, 0, 0],
+  regime_class_name: "BeltRegime",
+  start_year: 1,
+  final_year: 25,
+
+
+  // Belt regime parameters.
+  belt_regime_parameters: {
+    crop: "Pine",
+
+    use_belts: true,      // Belts are stripes of trees that span the length of the paddock.
+    use_borders: false,  // Borders are stripes of trees along the 4 edges of the paddock.
+
+    belt_num: 2,          // Number of belts in paddock
+    rows_per_belt: 2,     // rows of trees in each belt.
+    row_spacing: 3.9,       // The spacing between rows in a belt (in m)
+    plant_spacing: 2.7,     // The spacing between trees within a row (in m)
+    headland: 10,         // The space left at the end of each belt. The distance from end of belt to the paddock edge.
+    exclusion_zone: 2,    // The distance between the outer rows to where the primary crop is planted.
+
+    // The width of a belt is given by (rows_per_belt - 1) * row_spacing + 2 * exclusion_zone.
+    // The length of a belt is given by paddock_length - 2 * headland.
+
+    // Valid options are 'month based', 'biomass based', or 'custom'.
+    // Based on the coppice trigger type, enable the appropriate configuration parameters.
+    coppice_trigger_type: 'month based',
+    harvest_month: 12,
+    plant_month: 4,
+    harvest_years: [],
+
+  }
+
+
+}

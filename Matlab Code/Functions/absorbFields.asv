@@ -1,0 +1,13 @@
+function updated = absorbFields(default, existing)
+
+% For each field in existing, check if the field exists in default.
+% If it does and it's a struct, replace the field in default with the
+% result of absorbFields on that struct.
+% If it's not a struct, replace the field.
+
+fns = fieldnames(existing);
+for i = 1:length(fns)
+    fn = fns{i};
+    if isfield(default, 
+    
+end

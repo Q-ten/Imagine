@@ -1,0 +1,17 @@
+% setScenarioFile
+% This is a simple script that sets the scenarioFile variable to a file
+% path found via a file browser that's opened when this script is run.
+
+if ~exist(loc)   
+    loc = '.';
+end
+if ~ischar(loc)
+   loc = '.'; 
+end
+
+
+[file, path, filt] = uigetfile('.xlsm', 'Find Farm Scenario Setup file', '.');
+if ~isempty(file) && ~isempty(path)    
+    scenarioFile = [path, file];
+    disp(['Scenario File set to ', scenarioFile])
+end

@@ -1,0 +1,35 @@
+function profileTestTool
+
+a = 1:100000;
+b = 1:100000;
+
+c = a(b);
+d = any(b > length(a));
+
+ua = Unit('a', 'a', 'a');
+ub = Unit('b', 'b', 'b');
+f(1000, 1000) = Rate(0, ua, ua);
+
+g = f(:, 100);
+
+g2 = [f(:, 100).unit];
+
+g3(1000, 1) = ub;
+
+g4 = g3;
+g5 = g2;
+
+g6 = f;
+
+for i = 1:1000
+   g3(i, 1) = f(i, 100).unit;
+end
+
+h = f(100, 100)
+
+
+f(1000, 1000) = Rate(0, ua, ua);
+
+
+
+
