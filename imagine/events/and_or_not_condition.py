@@ -14,20 +14,6 @@ class AndOrNotCondition(ImagineCondition):
     def condition_type(self):
         return 'And / Or / Not'
 
-    """
-    Not required for the python version.
-    @property
-    def figure_name(self):
-        return 'conditionPanel_AndOrNot.fig'
-    
-    @property
-    def handles_field(self):
-        return 'AndOrNotHandles'
-    """
-
-    # def crop_name_has_changed(self, previous_name, new_name):
-    #     pass
-
     def get_longhand(self):
         if self.logic_type in ['And', 'Or']:
             lh = ['(']
@@ -61,11 +47,7 @@ class AndOrNotCondition(ImagineCondition):
                 "Shouldn't get here as obj.logic_type should always be one of [And, Or, Not, Any, All]. "
                 "If you get here, check the capitalization or other logic.")
 
-    # You will need to implement the following methods based on your specific UI implementation:
-    # - load_condition()
-    # - save_condition()
-
-    def is_triggered(self, sim, planted_crop): #condition_index=None, condition_truths=None):
+    def is_triggered(self, sim, planted_crop):
 
         if self.logic_type in ['And', 'All']:
             truth_list = [cond.is_triggered(sim, planted_crop) for cond in self.conditions]
@@ -82,30 +64,6 @@ class AndOrNotCondition(ImagineCondition):
             raise ValueError(
                 "Shouldn't get here as obj.logic_type should always be one of [And, Or, Not, Any, All]. "
                 "If you get here, check the capitalization or other logic.")
-
-        #
-        # if condition_index is None or condition_truths is None:
-        #     raise ValueError("isTriggered expects 2 arguments other than itself - the conditions's 1-based index and the list of condition truths of the previous conditions.")
-        #
-        # ranged_indices = [index for index in self.indices if 0 < index < condition_index]
-        #
-        # if len(condition_truths) < condition_index:
-        #     raise ValueError("Must pass in the condition truths of all previous conditions in the list.")
-        #
-        # if self.logic_type == 'And':
-        #     tf = True
-        #     for ix in ranged_indices:
-        #         tf = tf and condition_truths[ix]
-        # elif self.logic_type == 'Or':
-        #     tf = False
-        #     for ix in ranged_indices:
-        #         tf = tf or condition_truths[ix]
-        # elif self.logic_type == 'Not':
-        #     tf = not condition_truths[ranged_indices[0]]
-        # else:
-        #     tf = float('nan')
-        #
-        # return tf
 
     def is_valid(self, condition_index=None):
         valid = super().is_valid()

@@ -27,13 +27,6 @@ class TimeIndexedCondition(ImagineCondition):
     def condition_type(self):
         return 'Time Index Based'
 
-    """
-    This property is not needed in the python version.
-    @property
-    def figureName(self):
-        return 'conditionPanel_TimeIndexBased.fig'
-    """
-
     @property
     def handles_field(self):
         return 'TimeIndexBasedHandles'
@@ -68,28 +61,7 @@ class TimeIndexedCondition(ImagineCondition):
             lh += f"one of {indices}"
         return lh
 
-    """ 
-    These methods are not needed in the python version as they relate to setup and retrieval of the condition from a matlab gui.
-    def loadCondition(self, panel):
-        handles = panel.children
-        if not hasattr(handles, self.handlesField):
-            raise ValueError('The panel provided lives in a figure that doesn''t have the requisite controls to load the condition data into.')
-        newControls = getattr(handles, self.handlesField)
-        newControls.popupmenuIndexType.values = self.indexChoices
-        newControls.popupmenuIndexType.value = self.indexChoices.index(self.indexType)
-        newControls.editIndices.value = str(self.indices)
-
-    def saveCondition(self, panel):
-        handles = panel.children
-        if not hasattr(handles, self.handlesField):
-            raise ValueError('The panel provided lives in a figure that doesn''t have the requisite controls to load the condition data into.')
-        newControls = getattr(handles, self.handlesField)
-        self.indexType = newControls.popupmenuIndexType.value
-        self.indices = list(map(int, newControls.editIndices.value.split(',')))
-    """
-
-    def is_triggered(self, sim, planted_crop):#month_index, year_index):
-
+    def is_triggered(self, sim, planted_crop):
         if self.indexType == 'Year':
             return any(self.indices == sim.year_index)
 
@@ -97,14 +69,6 @@ class TimeIndexedCondition(ImagineCondition):
             return any(self.indices == sim.month_index)
 
         return False
-
-
-    """
-    This method is not needed in the python version.
-    def setupFromOldStructure(self, s):
-        self.indexType = s['string1'][s['value1']]
-        self.indices = list(map(int, s['string2'].split(','))))
-    """
 
     def is_valid(self):
         if not super().isValid():

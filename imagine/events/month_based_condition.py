@@ -9,14 +9,7 @@ class MonthBasedCondition(ImagineCondition):
     @property
     def condition_type(self):
         return 'Month Based'
-    
-    """
-    This method is not required in the python version.
-    @property
-    def figure_name(self):
-        return 'conditionPanel_MonthBased.fig'
-    """        
-    
+
     @property
     def handles_field(self):
         return 'MonthBasedHandles'
@@ -37,72 +30,8 @@ class MonthBasedCondition(ImagineCondition):
         else:
             return 'Invalid month definition.'
 
-    """
-    These methods are not required in the python version.
-
-    # Loads a set of controls into the panel and returns the handles to
-    # them as subHandles.
-    def load_condition(self, panel):
-
-        # First find our controls in handles.
-        # If they're not there, there's an error.
-        handles = panel.guidata()
-
-        if hasattr(handles, self.handles_field):
-            new_controls = getattr(handles, self.handles_field)
-        else:
-            raise ValueError('The panel provided lives in a figure that '
-                             'doesn\'t have the requisite controls to load '
-                             'the condition data into.')
-
-        # Now to start populating the controls.
-        new_controls.popupmenuMonthChoice.setStrings(MonthBasedCondition.MONTH_STRINGS)
-        new_controls.popupmenuMonthChoice.setValue(self.month_index)
-
-    # Uses the controls in subHandles to extract the parameters that
-    # define this condition.
-    def save_condition(self, panel):
-
-        # First find our controls in handles.
-        # If they're not there, there's an error.
-        handles = panel.guidata()
-
-        if hasattr(handles, self.handles_field):
-            new_controls = getattr(handles, self.handles_field)
-        else:
-            raise ValueError('The panel provided lives in a figure that '
-                             'doesn\'t have the requisite controls to load '
-                             'the condition data into.')
-
-        self.month_index = new_controls.popupmenuMonthChoice.getValue()
-
-    """
-
-    # A general method for determining if the condition is true.
-    def is_triggered(self, sim, planted_crop):#*args):
+    def is_triggered(self, sim, planted_crop):
         return sim.month_index % 12 == self.month_index
-
-        # # Initialise all trigger checks with nan to indicate that it
-        # # can't be found at this point.
-        # TF = float('nan')
-        # # Expect in the current monthIndex.
-        # if len(args) == 1:
-        #     sim_month_index = args[0]
-        #     try:
-        #         TF = sim_month_index % 12 == self.month_index
-        #     except TypeError:
-        #         pass
-        # else:
-        #     raise ValueError('MonthBasedCondition: isTriggered expects 1 argument '
-        #                      'other than itself - the sim\'s monthIndex.')
-        # return TF
-
-    """ 
-    This method is not required in the python version.
-    @staticmethod
-    def setup_from_old_structure(obj, s):
-        obj.month_index = s.value2
-    """
 
     @staticmethod
     def is_valid(cond):

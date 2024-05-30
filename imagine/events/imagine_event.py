@@ -1,6 +1,4 @@
-from typing import Optional
 from imagine.events.imagine_event_status import ImagineEventStatus
-#from pimagine.events.trigger import Trigger
 from imagine.events.condition_syntax import eval_condition_dictionary
 
 
@@ -10,7 +8,7 @@ class ImagineEvent:
     should occur, and what happens when it does.
     """
 
-    def __init__(self, name: str, status, trigger=None): #, cost_price_model=None):
+    def __init__(self, name: str, status, trigger=None):
         if isinstance(name, str):
             self.name = name
         else:
@@ -21,7 +19,6 @@ class ImagineEvent:
         else:
             raise ValueError("Second argument to ImagineEvent constructor must be an ImagineEventStatus object.")
 
-#        self.cost_price_model = cost_price_model
         # Initialise triggers to None
         self.private_redefined_trigger = None
         self.private_trigger = None
@@ -62,7 +59,6 @@ class ImagineEvent:
         regime_redefinable_locked = d.get('regime_redefinable_locked', True)
 
         ies = ImagineEventStatus(origin, crop_definition_locked, deferred_to_regime, deferred_to_regime_locked, regime_redefinable, regime_redefinable_locked)
-#        trig = Trigger(d.trigger)
         ie = ImagineEvent(d.name, ies)
         ie.trigger = eval_condition_dictionary(d.trigger)
 

@@ -24,13 +24,6 @@ class EventHappenedPreviouslyCondition(ImagineCondition):
     def condition_type(self):
         return 'Event Happened Previously'
 
-    # @property
-    # def handles_field(self):
-    #     return 'PreviousEventHandles'
-
-    # def crop_name_has_changed(self, previous_name, new_name):
-    #     pass
-
     def get_longhand(self):
         if not self.event_name:
             return '[No event chosen]'
@@ -52,7 +45,7 @@ class EventHappenedPreviouslyCondition(ImagineCondition):
 
         return f"{self.event_name} event occurred {comp_string}{one_of_string}{self.months_prior} months prior"
 
-    def is_triggered(self, sim, planted_crop):#sim_month_index=None, occurrences=None):
+    def is_triggered(self, sim, planted_crop):
         sim_month_index = sim.month_index
         occurrences = planted_crop.occurrences
 
