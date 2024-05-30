@@ -1,9 +1,14 @@
-from imagine.core import ImagineObject
+# Assumes this script is somewhere within the Imagine project.
+# Include the Imagine folder on python's path so it finds the imagine package.
 import pathlib
+import sys
+pathparts = pathlib.Path(__file__).parts
+sys.path.append(str(pathlib.Path(*pathparts[:pathparts[:].index('Imagine')+1])))
+
+from imagine.core import ImagineObject
 from imagine.simulation.simulation_manager import SimulationManager
 from imagine.crop.crop_manager import CropManager
 from imagine.simulation.sim_writer import SimWriter
-
 
 # Set paddock size prior to loading scenario
 im_ob = ImagineObject.get_instance()

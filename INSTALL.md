@@ -79,3 +79,21 @@ one of the scripts. From the Imagine folder you can do:
 
 More information can be found in the README file in the Formosa 
 folder.
+
+## Using an IDE
+
+It's often convenient to run python files from within 
+an Integrated Development Environment (IDE). IDEs make it easy to open 
+source or configuration files, make changes, and run or debug scripts 
+all from within one program.
+
+There are lots of good IDEs for python: 
+
+- [PyCharm](https://www.jetbrains.com/pycharm/)
+  - Community Edition is free to use.
+- [VSCode](https://code.visualstudio.com/)
+  - Free to use. Incredibly versatile. Requires python plugins.
+- [Spyder](https://www.spyder-ide.org/)
+  - Comes with the Anaconda distribution.
+- Many more...
+  
